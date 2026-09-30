@@ -423,6 +423,7 @@
     <string name="pref_smart_queue_settings_summary">Choose podcasts and how many episodes to add from each</string>
     <string name="pref_smart_queue_downloaded_only_title">Downloaded episodes only</string>
     <string name="pref_smart_queue_downloaded_only_summary">Only add episodes that are already downloaded</string>
+    <string name="pref_smart_queue_predictive_download_title">Predictive download</string>
     <string name="smart_queue_add_podcast">Add podcast</string>
     <string name="smart_queue_pick_podcast">Choose podcast</string>
     <string name="smart_queue_episode_direction_top">Top</string>

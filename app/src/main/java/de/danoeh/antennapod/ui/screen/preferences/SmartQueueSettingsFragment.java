@@ -143,6 +143,8 @@ public class SmartQueueSettingsFragment extends AnimatedPreferenceFragment {
                 menuInflater.inflate(R.menu.smart_queue_settings, menu);
                 MenuItem downloadedOnly = menu.findItem(R.id.smart_queue_downloaded_only_item);
                 downloadedOnly.setChecked(UserPreferences.isSmartQueueDownloadedOnly());
+                MenuItem predictiveDownload = menu.findItem(R.id.smart_queue_predictive_download_item);
+                predictiveDownload.setChecked(UserPreferences.isSmartQueuePredictiveDownloadEnabled());
             }
 
             @Override
@@ -150,6 +152,11 @@ public class SmartQueueSettingsFragment extends AnimatedPreferenceFragment {
                 if (menuItem.getItemId() == R.id.smart_queue_downloaded_only_item) {
                     menuItem.setChecked(!menuItem.isChecked());
                     UserPreferences.setSmartQueueDownloadedOnly(menuItem.isChecked());
+                    return true;
+                }
+                if (menuItem.getItemId() == R.id.smart_queue_predictive_download_item) {
+                    menuItem.setChecked(!menuItem.isChecked());
+                    UserPreferences.setSmartQueuePredictiveDownloadEnabled(menuItem.isChecked());
                     return true;
                 }
                 return false;

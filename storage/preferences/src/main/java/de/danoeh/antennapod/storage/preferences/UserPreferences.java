@@ -129,6 +129,7 @@ public abstract class UserPreferences {
     private static final String PREF_QUEUE_LOCKED = "prefQueueLocked";
     public static final String PREF_SMART_QUEUE_ENABLED = "prefSmartQueueEnabled";
     public static final String PREF_SMART_QUEUE_DOWNLOADED_ONLY = "prefSmartQueueDownloadedOnly";
+    public static final String PREF_SMART_QUEUE_PREDICTIVE_DOWNLOAD = "prefSmartQueuePredictiveDownload";
     public static final String PREF_SMART_QUEUE_SETTINGS = "prefSmartQueueSettings";
     private static final String PREF_SMART_QUEUE_RULES = "prefSmartQueueRules";
 
@@ -934,6 +935,14 @@ public abstract class UserPreferences {
 
     public static void setSmartQueueDownloadedOnly(boolean downloadedOnly) {
         prefs.edit().putBoolean(PREF_SMART_QUEUE_DOWNLOADED_ONLY, downloadedOnly).apply();
+    }
+
+    public static boolean isSmartQueuePredictiveDownloadEnabled() {
+        return prefs.getBoolean(PREF_SMART_QUEUE_PREDICTIVE_DOWNLOAD, false);
+    }
+
+    public static void setSmartQueuePredictiveDownloadEnabled(boolean enabled) {
+        prefs.edit().putBoolean(PREF_SMART_QUEUE_PREDICTIVE_DOWNLOAD, enabled).apply();
     }
 
     @NonNull

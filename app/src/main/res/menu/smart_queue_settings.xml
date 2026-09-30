@@ -8,4 +8,10 @@
         android:checkable="true"
         custom:showAsAction="never" />
 
+    <item
+        android:id="@+id/smart_queue_predictive_download_item"
+        android:title="@string/pref_smart_queue_predictive_download_title"
+        android:checkable="true"
+        custom:showAsAction="never" />
+
 </menu>

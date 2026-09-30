@@ -20,6 +20,11 @@ import de.danoeh.antennapod.storage.preferences.UserPreferences;
 public class SmartQueueRefiller {
     private static final String TAG = "SmartQueueRefiller";
 
+    @FunctionalInterface
+    private interface EpisodeCountProvider {
+        int getCount(SmartQueueRule rule);
+    }
+
     private SmartQueueRefiller() {
     }
 
@@ -38,6 +43,34 @@ public class SmartQueueRefiller {
 
     @NonNull
     public static List<FeedItem> buildQueueItems(boolean excludeCurrentlyPlaying) {
+        return pickItemsForRules(SmartQueueRule::getEpisodeCount, excludeCurrentlyPlaying, true);
+    }
+
+    @NonNull
+    public static List<FeedItem> getPredictiveDownloadCandidates() {
+        if (!UserPreferences.isSmartQueueEnabled()
+                || !UserPreferences.isSmartQueuePredictiveDownloadEnabled()
+                || UserPreferences.getSmartQueueRules().isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<FeedItem> buffer = pickItemsForRules(rule -> rule.getEpisodeCount() * 2, false, false);
+        List<FeedItem> undownloaded = new ArrayList<>();
+        for (FeedItem item : buffer) {
+            if (item.isDownloaded() || !item.hasMedia()) {
+                continue;
+            }
+            Feed feed = item.getFeed();
+            if (feed == null || feed.isLocalFeed()) {
+                continue;
+            }
+            undownloaded.add(item);
+        }
+        return undownloaded;
+    }
+
+    @NonNull
+    private static List<FeedItem> pickItemsForRules(@NonNull EpisodeCountProvider countProvider,
+            boolean excludeCurrentlyPlaying, boolean applyDownloadedOnlyFilter) {
         long excludeItemId = -1;
         if (excludeCurrentlyPlaying) {
             FeedMedia playing = DBReader.getFeedMedia(PlaybackPreferences.getCurrentlyPlayingFeedMediaId());
@@ -58,7 +91,8 @@ public class SmartQueueRefiller {
                 if (item.isPlayed() || !item.hasMedia()) {
                     continue;
                 }
-                if (UserPreferences.isSmartQueueDownloadedOnly() && !item.isDownloaded()) {
+                if (applyDownloadedOnlyFilter && UserPreferences.isSmartQueueDownloadedOnly()
+                        && !item.isDownloaded()) {
                     continue;
                 }
                 if (item.getId() == excludeItemId) {
@@ -74,7 +108,7 @@ public class SmartQueueRefiller {
                 sortOrder = SortOrder.GLOBAL_DEFAULT;
             }
             FeedItemPermutors.getPermutor(sortOrder).reorder(candidates);
-            int count = Math.min(rule.getEpisodeCount(), candidates.size());
+            int count = Math.min(countProvider.getCount(rule), candidates.size());
             List<FeedItem> picked;
             if (rule.isFromTop()) {
                 picked = candidates.subList(0, count);
