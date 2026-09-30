@@ -104,8 +104,13 @@ public class EpisodeItemListAdapter extends SelectableAdapter<EpisodeItemViewHol
         });
         holder.itemView.setOnCreateContextMenuListener(this);
         holder.itemView.setOnLongClickListener(v -> {
+            int position = holder.getBindingAdapterPosition();
+            if (inActionMode()) {
+                selectRangeToPosition(position);
+                return true;
+            }
             longPressedItem = item;
-            longPressedPosition = holder.getBindingAdapterPosition();
+            longPressedPosition = position;
             return false;
         });
         holder.itemView.setOnTouchListener((v, e) -> {

@@ -117,6 +117,7 @@ public class SubscriptionsRecyclerAdapter extends SelectableAdapter<Subscription
     @Override
     protected void toggleSelection(int pos) {
         setSelected(pos, !isSelected(pos));
+        lastToggledPosition = pos;
         notifyItemChanged(pos, Boolean.TRUE);
         if (getSelectedCount() == 0) {
             endSelectMode();
