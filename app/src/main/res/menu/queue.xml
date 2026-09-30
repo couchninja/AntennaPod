@@ -25,6 +25,16 @@
         android:title="@string/sort" />
 
     <item
+        android:id="@+id/smart_queue_settings"
+        android:title="@string/pref_smart_queue_settings_title"
+        android:visible="false" />
+
+    <item
+        android:id="@+id/rebuild_smart_queue"
+        android:title="@string/rebuild_smart_queue_label"
+        android:visible="false" />
+
+    <item
         android:id="@+id/clear_queue"
         android:title="@string/clear_queue_label"
         custom:showAsAction="collapseActionView"

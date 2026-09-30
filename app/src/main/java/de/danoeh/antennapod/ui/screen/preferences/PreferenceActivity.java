@@ -33,6 +33,7 @@ public class PreferenceActivity extends ToolbarActivity implements SearchPrefere
     private static final String FRAGMENT_TAG = "tag_preferences";
     public static final String OPEN_AUTO_DOWNLOAD_SETTINGS = "OpenAutoDownloadSettings";
     public static final String OPEN_PLAYBACK_SETTINGS = "OpenPlaybackSettings";
+    public static final String OPEN_SMART_QUEUE_SETTINGS = "OpenSmartQueueSettings";
     private SettingsActivityBinding binding;
 
     @Override
@@ -59,6 +60,9 @@ public class PreferenceActivity extends ToolbarActivity implements SearchPrefere
         if (intent.getBooleanExtra(OPEN_PLAYBACK_SETTINGS, false)) {
             openScreen(R.xml.preferences_playback);
         }
+        if (intent.getBooleanExtra(OPEN_SMART_QUEUE_SETTINGS, false)) {
+            openScreen(R.xml.preferences_smart_queue);
+        }
     }
 
     private PreferenceFragmentCompat getPreferenceScreen(int screen) {
@@ -84,6 +88,8 @@ public class PreferenceActivity extends ToolbarActivity implements SearchPrefere
             prefFragment = new AutomaticDeletionPreferencesFragment();
         } else if (screen == R.xml.preferences_parental_control) {
             prefFragment = new ParentalControlPreferencesFragment();
+        } else if (screen == R.xml.preferences_smart_queue) {
+            prefFragment = new SmartQueueSettingsFragment();
         }
         return prefFragment;
     }
@@ -111,6 +117,8 @@ public class PreferenceActivity extends ToolbarActivity implements SearchPrefere
             return R.string.pref_auto_delete_title;
         } else if (preferences == R.xml.preferences_parental_control) {
             return R.string.pref_parental_control_title;
+        } else if (preferences == R.xml.preferences_smart_queue) {
+            return R.string.pref_smart_queue_settings_title;
         }
         return R.string.settings_label;
     }

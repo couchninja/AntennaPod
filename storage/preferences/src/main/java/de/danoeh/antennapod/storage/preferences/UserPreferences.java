@@ -13,8 +13,10 @@ import androidx.core.app.NotificationCompat;
 import androidx.preference.PreferenceManager;
 
 import de.danoeh.antennapod.model.feed.FeedOrder;
+import de.danoeh.antennapod.model.feed.SmartQueueRule;
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
@@ -125,6 +127,10 @@ public abstract class UserPreferences {
     private static final String PREF_FAST_FORWARD_SECS = "prefFastForwardSecs";
     private static final String PREF_REWIND_SECS = "prefRewindSecs";
     private static final String PREF_QUEUE_LOCKED = "prefQueueLocked";
+    public static final String PREF_SMART_QUEUE_ENABLED = "prefSmartQueueEnabled";
+    public static final String PREF_SMART_QUEUE_DOWNLOADED_ONLY = "prefSmartQueueDownloadedOnly";
+    public static final String PREF_SMART_QUEUE_SETTINGS = "prefSmartQueueSettings";
+    private static final String PREF_SMART_QUEUE_RULES = "prefSmartQueueRules";
 
     // Experimental
     public static final int EPISODE_CLEANUP_QUEUE = -1;
@@ -912,5 +918,66 @@ public abstract class UserPreferences {
 
     public static void setPrefFilterAllEpisodes(String filter) {
         prefs.edit().putString(PREF_FILTER_ALL_EPISODES, filter).apply();
+    }
+
+    public static boolean isSmartQueueEnabled() {
+        return prefs.getBoolean(PREF_SMART_QUEUE_ENABLED, false);
+    }
+
+    public static void setSmartQueueEnabled(boolean enabled) {
+        prefs.edit().putBoolean(PREF_SMART_QUEUE_ENABLED, enabled).apply();
+    }
+
+    public static boolean isSmartQueueDownloadedOnly() {
+        return prefs.getBoolean(PREF_SMART_QUEUE_DOWNLOADED_ONLY, true);
+    }
+
+    public static void setSmartQueueDownloadedOnly(boolean downloadedOnly) {
+        prefs.edit().putBoolean(PREF_SMART_QUEUE_DOWNLOADED_ONLY, downloadedOnly).apply();
+    }
+
+    @NonNull
+    public static List<SmartQueueRule> getSmartQueueRules() {
+        String json = prefs.getString(PREF_SMART_QUEUE_RULES, "[]");
+        List<SmartQueueRule> rules = new ArrayList<>();
+        try {
+            JSONArray array = new JSONArray(json);
+            for (int i = 0; i < array.length(); i++) {
+                JSONObject object = array.getJSONObject(i);
+                rules.add(new SmartQueueRule(
+                        object.getLong("feedId"),
+                        object.getBoolean("fromTop"),
+                        object.getInt("episodeCount")));
+            }
+        } catch (JSONException e) {
+            Log.e(TAG, "Failed to parse smart queue rules");
+            e.printStackTrace();
+        }
+        return rules;
+    }
+
+    public static void setSmartQueueRules(@NonNull List<SmartQueueRule> rules) {
+        JSONArray array = new JSONArray();
+        for (SmartQueueRule rule : rules) {
+            JSONObject object = new JSONObject();
+            try {
+                object.put("feedId", rule.getFeedId());
+                object.put("fromTop", rule.isFromTop());
+                object.put("episodeCount", rule.getEpisodeCount());
+                array.put(object);
+            } catch (JSONException e) {
+                Log.e(TAG, "Failed to serialize smart queue rule");
+                e.printStackTrace();
+            }
+        }
+        prefs.edit().putString(PREF_SMART_QUEUE_RULES, array.toString()).apply();
+    }
+
+    public static void removeSmartQueueRulesForFeed(long feedId) {
+        List<SmartQueueRule> rules = getSmartQueueRules();
+        boolean changed = rules.removeIf(rule -> rule.getFeedId() == feedId);
+        if (changed) {
+            setSmartQueueRules(rules);
+        }
     }
 }

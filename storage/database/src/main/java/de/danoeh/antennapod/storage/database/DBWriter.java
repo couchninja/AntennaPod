@@ -110,7 +110,7 @@ public class DBWriter {
             EventBus.getDefault().post(new FeedItemEvent(media.getItem() != null
                     ? Collections.singletonList(media.getItem()) : Collections.emptyList(), false));
             if (UserPreferences.shouldDeleteRemoveFromQueue()) {
-                DBWriter.removeQueueItemSynchronous(context, false, media.getItemId());
+                DBWriter.removeQueueItemSynchronous(context, false, false, media.getItemId());
             }
         });
     }
@@ -182,6 +182,8 @@ public class DBWriter {
             }
 
             deleteFeedItemsSynchronous(context, feed.getItems());
+
+            UserPreferences.removeSmartQueueRulesForFeed(feedId);
 
             // delete feed
             PodDBAdapter adapter = PodDBAdapter.getInstance();
@@ -453,13 +455,74 @@ public class DBWriter {
      * Removes all FeedItem objects from the queue.
      */
     public static Future<?> clearQueue() {
-        return runOnDbThread(() -> {
-            PodDBAdapter adapter = PodDBAdapter.getInstance();
-            adapter.open();
-            adapter.clearQueue();
-            adapter.close();
-            EventBus.getDefault().post(QueueEvent.cleared());
-        });
+        return runOnDbThread(() -> clearQueueSynchronous());
+    }
+
+    public static Future<?> rebuildSmartQueue(final Context context) {
+        return runOnDbThread(() -> rebuildSmartQueueSynchronous(context));
+    }
+
+    private static void clearQueueSynchronous() {
+        final PodDBAdapter adapter = PodDBAdapter.getInstance();
+        adapter.open();
+        clearQueueStorage(adapter);
+        adapter.close();
+    }
+
+    private static void rebuildSmartQueueSynchronous(final Context context) {
+        if (UserPreferences.isQueueLocked() || !UserPreferences.isSmartQueueEnabled()) {
+            return;
+        }
+        final PodDBAdapter adapter = PodDBAdapter.getInstance();
+        adapter.open();
+        clearQueueStorage(adapter);
+        applySmartQueueFillSynchronous(context, adapter,
+                SmartQueueRefiller.buildQueueItems(true));
+        adapter.close();
+    }
+
+    private static void clearQueueStorage(final PodDBAdapter adapter) {
+        List<FeedItem> queue = DBReader.getQueue();
+        for (FeedItem item : queue) {
+            item.removeTag(FeedItem.TAG_QUEUE);
+        }
+        adapter.clearQueue();
+        EventBus.getDefault().post(QueueEvent.cleared());
+        if (!queue.isEmpty()) {
+            EventBus.getDefault().post(new FeedItemEvent(queue, false));
+        }
+    }
+
+    static void applySmartQueueFillSynchronous(final Context context, final PodDBAdapter adapter,
+                                                       final List<FeedItem> items) {
+        if (items.isEmpty()) {
+            return;
+        }
+        final List<FeedItem> queue = DBReader.getQueue();
+        List<FeedItem> markAsUnplayed = new ArrayList<>();
+        List<FeedItem> updatedItems = new ArrayList<>();
+        for (FeedItem item : items) {
+            if (itemListContains(queue, item.getId())) {
+                continue;
+            }
+            queue.add(item);
+            item.addTag(FeedItem.TAG_QUEUE);
+            updatedItems.add(item);
+            if (item.isNew()) {
+                markAsUnplayed.add(item);
+            }
+        }
+        if (updatedItems.isEmpty()) {
+            return;
+        }
+        DBReader.loadFeedDataOfFeedItemList(updatedItems);
+        adapter.setQueue(queue);
+        EventBus.getDefault().post(QueueEvent.setQueue(queue));
+        EventBus.getDefault().post(new FeedItemEvent(updatedItems, false));
+        markItemsPlayed(FeedItem.UNPLAYED, false, markAsUnplayed);
+        if (!UserPreferences.isSmartQueueDownloadedOnly()) {
+            AutoDownloadManager.getInstance().autodownloadUndownloadedItems(context);
+        }
     }
 
     /**
@@ -471,16 +534,24 @@ public class DBWriter {
      */
     public static Future<?> removeQueueItem(final Context context,
                                             final boolean performAutoDownload, final FeedItem item) {
-        return runOnDbThread(() -> removeQueueItemSynchronous(context, performAutoDownload, item.getId()));
+        return removeQueueItem(context, performAutoDownload, false, item);
+    }
+
+    public static Future<?> removeQueueItem(final Context context, final boolean performAutoDownload,
+                                            final boolean smartQueueRefillIfPlaybackEnded,
+                                            final FeedItem item) {
+        return runOnDbThread(() -> removeQueueItemSynchronous(context, performAutoDownload,
+                smartQueueRefillIfPlaybackEnded, item.getId()));
     }
 
     public static Future<?> removeQueueItem(final Context context, final boolean performAutoDownload,
                                             final long... itemIds) {
-        return runOnDbThread(() -> removeQueueItemSynchronous(context, performAutoDownload, itemIds));
+        return runOnDbThread(() -> removeQueueItemSynchronous(context, performAutoDownload, false, itemIds));
     }
 
     private static void removeQueueItemSynchronous(final Context context,
                                                    final boolean performAutoDownload,
+                                                   final boolean smartQueueRefillIfPlaybackEnded,
                                                    final long... itemIds) {
         if (itemIds.length < 1) {
             return;
@@ -518,6 +589,9 @@ public class DBWriter {
             EventBus.getDefault().post(new FeedItemEvent(updatedItems, false));
         } else {
             Log.w(TAG, "Queue was not modified by call to removeQueueItem");
+        }
+        if (smartQueueRefillIfPlaybackEnded && queue.isEmpty()) {
+            SmartQueueRefiller.refillAfterPlaybackEndedSynchronous(context, adapter);
         }
         adapter.close();
         if (performAutoDownload) {
