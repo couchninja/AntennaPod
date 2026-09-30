@@ -18,19 +18,18 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.PopupMenu;
-import androidx.core.graphics.ColorUtils;
+import androidx.collection.ArrayMap;
 import androidx.core.view.MenuProvider;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.bumptech.glide.Glide;
-import com.bumptech.glide.request.RequestOptions;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import de.danoeh.antennapod.R;
@@ -111,18 +110,16 @@ public class SmartQueueSettingsFragment extends AnimatedPreferenceFragment {
                                     @NonNull RecyclerView.ViewHolder viewHolder, float dX, float dY,
                                     int actionState, boolean isCurrentlyActive) {
                 if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE) {
-                    int themeColor = ThemeUtils.getColorFromAttr(recyclerView.getContext(),
-                            android.R.attr.colorBackground);
                     int actionColor = ThemeUtils.getColorFromAttr(recyclerView.getContext(), R.attr.icon_red);
+                    int backgroundColor = ThemeUtils.getColorFromAttr(recyclerView.getContext(),
+                            R.attr.background_elevated);
                     new RecyclerViewSwipeDecorator.Builder(c, recyclerView, viewHolder, dX, dY,
                             actionState, isCurrentlyActive)
                             .addSwipeRightActionIcon(R.drawable.ic_delete)
                             .addSwipeLeftActionIcon(R.drawable.ic_delete)
-                            .addSwipeRightBackgroundColor(ThemeUtils.getColorFromAttr(
-                                    recyclerView.getContext(), R.attr.background_elevated))
-                            .addSwipeLeftBackgroundColor(ThemeUtils.getColorFromAttr(
-                                    recyclerView.getContext(), R.attr.background_elevated))
-                            .setActionIconTint(ColorUtils.blendARGB(themeColor, actionColor, 1.0f))
+                            .addSwipeRightBackgroundColor(backgroundColor)
+                            .addSwipeLeftBackgroundColor(backgroundColor)
+                            .setActionIconTint(actionColor)
                             .create()
                             .decorate();
                 }
@@ -183,17 +180,13 @@ public class SmartQueueSettingsFragment extends AnimatedPreferenceFragment {
         }
         disposable = io.reactivex.rxjava3.core.Single.fromCallable(() -> {
             List<SmartQueueRule> rules = UserPreferences.getSmartQueueRules();
-            List<Feed> feeds = DBReader.getFeedList();
+            Map<Long, Feed> feedById = new ArrayMap<>();
+            for (Feed feed : DBReader.getFeedList()) {
+                feedById.put(feed.getId(), feed);
+            }
             List<SmartQueueRuleEntry> loaded = new ArrayList<>();
             for (SmartQueueRule rule : rules) {
-                Feed feed = null;
-                for (Feed candidate : feeds) {
-                    if (candidate.getId() == rule.getFeedId()) {
-                        feed = candidate;
-                        break;
-                    }
-                }
-                loaded.add(new SmartQueueRuleEntry(rule, feed));
+                loaded.add(new SmartQueueRuleEntry(rule, feedById.get(rule.getFeedId())));
             }
             return loaded;
         })
@@ -215,6 +208,9 @@ public class SmartQueueSettingsFragment extends AnimatedPreferenceFragment {
     }
 
     private void showFeedPicker() {
+        if (disposable != null) {
+            disposable.dispose();
+        }
         disposable = io.reactivex.rxjava3.core.Single.fromCallable(() -> {
             Set<Long> usedFeedIds = new HashSet<>();
             for (SmartQueueRuleEntry entry : entries) {
@@ -328,6 +324,47 @@ public class SmartQueueSettingsFragment extends AnimatedPreferenceFragment {
                 directionSpinner = itemView.findViewById(R.id.directionSpinner);
                 episodeCountSpinner = itemView.findViewById(R.id.episodeCountSpinner);
 
+                ArrayAdapter<String> directionAdapter = new ArrayAdapter<>(itemView.getContext(),
+                        android.R.layout.simple_spinner_item,
+                        new String[]{
+                                itemView.getContext().getString(R.string.smart_queue_episode_direction_top),
+                                itemView.getContext().getString(R.string.smart_queue_episode_direction_bottom)
+                        });
+                directionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                directionSpinner.setAdapter(directionAdapter);
+
+                List<String> counts = new ArrayList<>();
+                for (int i = SmartQueueRule.MIN_EPISODE_COUNT; i <= SmartQueueRule.MAX_EPISODE_COUNT; i++) {
+                    counts.add(itemView.getResources().getQuantityString(R.plurals.num_episodes, i, i));
+                }
+                ArrayAdapter<String> countAdapter = new ArrayAdapter<>(itemView.getContext(),
+                        android.R.layout.simple_spinner_item, counts);
+                countAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                episodeCountSpinner.setAdapter(countAdapter);
+
+                AdapterView.OnItemSelectedListener spinnerListener = new AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(AdapterView<?> parent, View view, int index, long id) {
+                        if (bindingSpinners) {
+                            return;
+                        }
+                        int pos = getBindingAdapterPosition();
+                        if (pos < 0 || pos >= entries.size()) {
+                            return;
+                        }
+                        SmartQueueRuleEntry current = entries.get(pos);
+                        current.rule.setFromTop(directionSpinner.getSelectedItemPosition() == 0);
+                        current.rule.setEpisodeCount(episodeCountSpinner.getSelectedItemPosition() + 1);
+                        persistRules();
+                    }
+
+                    @Override
+                    public void onNothingSelected(AdapterView<?> parent) {
+                    }
+                };
+                directionSpinner.setOnItemSelectedListener(spinnerListener);
+                episodeCountSpinner.setOnItemSelectedListener(spinnerListener);
+
                 dragHandle.setOnTouchListener((v, event) -> {
                     if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
                         itemTouchHelper.startDrag(this);
@@ -354,7 +391,6 @@ public class SmartQueueSettingsFragment extends AnimatedPreferenceFragment {
                     if (position > 0) {
                         entries.add(0, entries.remove(position));
                         adapter.notifyItemMoved(position, 0);
-                        adapter.notifyDataSetChanged();
                         persistRules();
                     }
                     return true;
@@ -374,61 +410,19 @@ public class SmartQueueSettingsFragment extends AnimatedPreferenceFragment {
             void bind(SmartQueueRuleEntry entry, int position) {
                 String title = entry.feed != null ? entry.feed.getTitle() : String.valueOf(entry.rule.getFeedId());
                 feedTitle.setText(title);
-                if (entry.feed != null && entry.feed.getImageUrl() != null) {
-                    Glide.with(coverImage.getContext())
-                            .load(entry.feed.getImageUrl())
-                            .apply(new RequestOptions()
-                                    .placeholder(R.color.light_gray)
-                                    .fitCenter()
-                                    .dontAnimate())
-                            .into(coverImage);
+                if (entry.feed != null) {
+                    coverImage.setContentDescription(entry.feed.getTitle());
+                    new CoverLoader()
+                            .withUri(entry.feed.getImageUrl())
+                            .withCoverView(coverImage)
+                            .load();
                 } else {
                     coverImage.setImageResource(android.R.color.transparent);
                 }
 
                 bindingSpinners = true;
-                ArrayAdapter<String> directionAdapter = new ArrayAdapter<>(itemView.getContext(),
-                        android.R.layout.simple_spinner_item,
-                        new String[]{
-                                getString(R.string.smart_queue_episode_direction_top),
-                                getString(R.string.smart_queue_episode_direction_bottom)
-                        });
-                directionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                directionSpinner.setAdapter(directionAdapter);
                 directionSpinner.setSelection(entry.rule.isFromTop() ? 0 : 1);
-
-                List<String> counts = new ArrayList<>();
-                for (int i = SmartQueueRule.MIN_EPISODE_COUNT; i <= SmartQueueRule.MAX_EPISODE_COUNT; i++) {
-                    counts.add(getResources().getQuantityString(R.plurals.num_episodes, i, i));
-                }
-                ArrayAdapter<String> countAdapter = new ArrayAdapter<>(itemView.getContext(),
-                        android.R.layout.simple_spinner_item, counts);
-                countAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                episodeCountSpinner.setAdapter(countAdapter);
                 episodeCountSpinner.setSelection(entry.rule.getEpisodeCount() - 1);
-
-                AdapterView.OnItemSelectedListener listener = new AdapterView.OnItemSelectedListener() {
-                    @Override
-                    public void onItemSelected(AdapterView<?> parent, View view, int index, long id) {
-                        if (bindingSpinners) {
-                            return;
-                        }
-                        int pos = getBindingAdapterPosition();
-                        if (pos < 0 || pos >= entries.size()) {
-                            return;
-                        }
-                        SmartQueueRuleEntry current = entries.get(pos);
-                        current.rule.setFromTop(directionSpinner.getSelectedItemPosition() == 0);
-                        current.rule.setEpisodeCount(episodeCountSpinner.getSelectedItemPosition() + 1);
-                        persistRules();
-                    }
-
-                    @Override
-                    public void onNothingSelected(AdapterView<?> parent) {
-                    }
-                };
-                directionSpinner.setOnItemSelectedListener(listener);
-                episodeCountSpinner.setOnItemSelectedListener(listener);
                 bindingSpinners = false;
             }
         }

@@ -944,10 +944,13 @@ public abstract class UserPreferences {
             JSONArray array = new JSONArray(json);
             for (int i = 0; i < array.length(); i++) {
                 JSONObject object = array.getJSONObject(i);
+                int episodeCount = object.getInt("episodeCount");
+                episodeCount = Math.max(SmartQueueRule.MIN_EPISODE_COUNT,
+                        Math.min(SmartQueueRule.MAX_EPISODE_COUNT, episodeCount));
                 rules.add(new SmartQueueRule(
                         object.getLong("feedId"),
                         object.getBoolean("fromTop"),
-                        object.getInt("episodeCount")));
+                        episodeCount));
             }
         } catch (JSONException e) {
             Log.e(TAG, "Failed to parse smart queue rules");

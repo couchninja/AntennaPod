@@ -478,6 +478,9 @@ public class DBWriter {
         clearQueueStorage(adapter);
         applySmartQueueFillSynchronous(context, adapter,
                 SmartQueueRefiller.buildQueueItems(true));
+        if (!UserPreferences.isSmartQueueDownloadedOnly()) {
+            AutoDownloadManager.getInstance().autodownloadUndownloadedItems(context);
+        }
         adapter.close();
     }
 
@@ -520,9 +523,6 @@ public class DBWriter {
         EventBus.getDefault().post(QueueEvent.setQueue(queue));
         EventBus.getDefault().post(new FeedItemEvent(updatedItems, false));
         markItemsPlayed(FeedItem.UNPLAYED, false, markAsUnplayed);
-        if (!UserPreferences.isSmartQueueDownloadedOnly()) {
-            AutoDownloadManager.getInstance().autodownloadUndownloadedItems(context);
-        }
     }
 
     /**

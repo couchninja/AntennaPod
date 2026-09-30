@@ -47,7 +47,8 @@ public class SmartQueueRefiller {
         }
 
         List<FeedItem> result = new ArrayList<>();
-        for (SmartQueueRule rule : UserPreferences.getSmartQueueRules()) {
+        List<SmartQueueRule> rules = UserPreferences.getSmartQueueRules();
+        for (SmartQueueRule rule : rules) {
             Feed feed = DBReader.getFeed(rule.getFeedId(), false, 0, Integer.MAX_VALUE);
             if (feed == null || feed.getItems() == null) {
                 continue;
