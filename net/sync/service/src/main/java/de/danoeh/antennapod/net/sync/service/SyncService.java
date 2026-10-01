@@ -53,6 +53,7 @@ import java.util.Map;
 
 public class SyncService extends Worker {
     public static final String TAG = "SyncService";
+    public static final String INPUT_EPISODES_FROM_SERVER_ONLY = "episodes_from_server_only";
 
     private static boolean currentlyActive = false;
     private final SynchronizationQueueStorage synchronizationQueueStorage;
@@ -76,8 +77,11 @@ public class SyncService extends Worker {
         currentlyActive = true;
         SynchronizationSettings.updateLastSynchronizationAttempt();
         try {
+            boolean episodesFromServerOnly = getInputData().getBoolean(INPUT_EPISODES_FROM_SERVER_ONLY, false);
             activeSyncProvider.login();
-            syncSubscriptions(activeSyncProvider);
+            if (!episodesFromServerOnly) {
+                syncSubscriptions(activeSyncProvider);
+            }
             waitForDownloadServiceCompleted();
             if (someFeedWasNotRefreshedYet()) {
                 // Note that this service might get called several times before the FeedUpdate completes
@@ -86,7 +90,7 @@ public class SyncService extends Worker {
                 FeedUpdateManager.getInstance().runOnce(getApplicationContext());
                 return Result.success();
             }
-            syncEpisodeActions(activeSyncProvider);
+            syncEpisodeActions(activeSyncProvider, episodesFromServerOnly);
             activeSyncProvider.logout();
             clearErrorNotifications();
             EventBus.getDefault().postSticky(new SyncServiceEvent(R.string.sync_status_success));
@@ -216,13 +220,18 @@ public class SyncService extends Worker {
         SynchronizationSettings.setLastSubscriptionSynchronizationAttemptTimestamp(newTimeStamp);
     }
 
-    private void syncEpisodeActions(ISyncService syncServiceImpl) throws SyncServiceException {
+    private void syncEpisodeActions(ISyncService syncServiceImpl, boolean downloadOnly) throws SyncServiceException {
         final long lastSync = SynchronizationSettings.getLastEpisodeActionSynchronizationTimestamp();
         EventBus.getDefault().postSticky(new SyncServiceEvent(R.string.sync_status_episodes_download));
         EpisodeActionChanges getResponse = syncServiceImpl.getEpisodeActionChanges(lastSync);
         long newTimeStamp = getResponse.getTimestamp();
         List<EpisodeAction> remoteActions = getResponse.getEpisodeActions();
-        processEpisodeActions(remoteActions);
+        processEpisodeActions(remoteActions, downloadOnly);
+
+        if (downloadOnly) {
+            SynchronizationSettings.setLastEpisodeActionSynchronizationAttemptTimestamp(newTimeStamp);
+            return;
+        }
 
         // upload local actions
         EventBus.getDefault().postSticky(new SyncServiceEvent(R.string.sync_status_episodes_upload));
@@ -262,15 +271,17 @@ public class SyncService extends Worker {
         SynchronizationSettings.setLastEpisodeActionSynchronizationAttemptTimestamp(newTimeStamp);
     }
 
-    private synchronized void processEpisodeActions(List<EpisodeAction> remoteActions) {
+    private synchronized void processEpisodeActions(List<EpisodeAction> remoteActions, boolean fromServerOnly) {
         Log.d(TAG, "Processing " + remoteActions.size() + " actions");
         if (remoteActions.isEmpty()) {
             return;
         }
 
+        List<EpisodeAction> queuedEpisodeActions = fromServerOnly
+                ? Collections.emptyList()
+                : synchronizationQueueStorage.getQueuedEpisodeActions();
         Map<Pair<String, String>, EpisodeAction> actionsToUpdate = EpisodeActionFilter
-                .getRemoteActionsOverridingLocalActions(remoteActions,
-                        synchronizationQueueStorage.getQueuedEpisodeActions());
+                .getRemoteActionsOverridingLocalActions(remoteActions, queuedEpisodeActions);
         LongList queueToBeRemoved = new LongList();
         List<FeedItem> updatedItems = new ArrayList<>();
         for (EpisodeAction action : actionsToUpdate.values()) {
@@ -284,13 +295,44 @@ public class SyncService extends Worker {
                 Log.i(TAG, "Feed item has no media: " + action);
                 continue;
             }
+            FeedMedia media = feedItem.getMedia();
             if (action.getAction() == EpisodeAction.Action.NEW) {
                 Log.d(TAG, "Marking as unplayed: " + action);
                 feedItem.setPlayed(false);
+                if (fromServerOnly) {
+                    media.setPosition(0);
+                }
                 updatedItems.add(feedItem);
                 continue;
             }
-            FeedMedia media = feedItem.getMedia();
+            if (fromServerOnly && action.getPosition() >= 0) {
+                int totalSeconds = action.getTotal();
+                if (totalSeconds <= 0 && media.getDuration() > 0) {
+                    totalSeconds = media.getDuration() / 1000;
+                }
+                if (totalSeconds <= 0) {
+                    Log.d(TAG, "Skipping PLAY without total from server: " + action);
+                    continue;
+                }
+                int smartMarkAsPlayedSecs = UserPreferences.getSmartMarkAsPlayedSecs();
+                boolean almostEndedOnServer = action.getPosition() >= totalSeconds - smartMarkAsPlayedSecs;
+                if (action.getPosition() == totalSeconds || almostEndedOnServer) {
+                    Log.d(TAG, "Marking as played (server play state): " + action);
+                    feedItem.setPlayed(true);
+                    media.setPosition(0);
+                    queueToBeRemoved.add(feedItem.getId());
+                } else {
+                    Log.d(TAG, "Marking as unplayed (server play state): " + action);
+                    feedItem.setPlayed(false);
+                    media.setPosition(action.getPosition() * 1000);
+                }
+                updatedItems.add(feedItem);
+                continue;
+            }
+            if (fromServerOnly) {
+                Log.d(TAG, "Skipping PLAY without position from server: " + action);
+                continue;
+            }
             int smartMarkAsPlayedSecs = UserPreferences.getSmartMarkAsPlayedSecs();
             if (action.getPosition() >= 0) {
                 media.setPosition(action.getPosition() * 1000);

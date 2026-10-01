@@ -3,6 +3,7 @@ package de.danoeh.antennapod.net.sync.service;
 import android.content.Context;
 import androidx.work.BackoffPolicy;
 import androidx.work.Constraints;
+import androidx.work.Data;
 import androidx.work.ExistingWorkPolicy;
 import androidx.work.NetworkType;
 import androidx.work.OneTimeWorkRequest;
@@ -52,7 +53,23 @@ public class SynchronizationQueueImpl extends SynchronizationQueue {
         });
     }
 
+    public void syncEpisodesFromServer() {
+        LockingAsyncExecutor.executeLockedAsync(() -> {
+            SynchronizationSettings.resetEpisodeActionSynchronizationTimestamp();
+            OneTimeWorkRequest workRequest = getWorkRequest(new Data.Builder()
+                    .putBoolean(SyncService.INPUT_EPISODES_FROM_SERVER_ONLY, true)
+                    .build())
+                    .setInitialDelay(0L, TimeUnit.SECONDS)
+                    .build();
+            WorkManager.getInstance(context).enqueueUniqueWork(WORK_ID_SYNC, ExistingWorkPolicy.REPLACE, workRequest);
+        });
+    }
+
     private static OneTimeWorkRequest.Builder getWorkRequest() {
+        return getWorkRequest(new Data.Builder().build());
+    }
+
+    private static OneTimeWorkRequest.Builder getWorkRequest(Data inputData) {
         Constraints.Builder constraints = new Constraints.Builder();
         boolean allowMobileSync = UserPreferences.isAllowMobileSync();
         if (allowMobileSync) {
@@ -62,6 +79,7 @@ public class SynchronizationQueueImpl extends SynchronizationQueue {
         }
 
         OneTimeWorkRequest.Builder builder = new OneTimeWorkRequest.Builder(SyncService.class)
+                .setInputData(inputData)
                 .setConstraints(constraints.build())
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.MINUTES);
 

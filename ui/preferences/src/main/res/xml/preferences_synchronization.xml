@@ -24,6 +24,11 @@
         android:summary="@string/synchronization_force_sync_summary"/>
 
     <Preference
+        android:key="pref_synchronization_episodes_from_server"
+        android:title="@string/synchronization_episodes_from_server_title"
+        android:summary="@string/synchronization_episodes_from_server_summary"/>
+
+    <Preference
         android:key="pref_synchronization_logout"
         android:title="@string/synchronization_logout"/>
 

@@ -22,6 +22,8 @@ public abstract class SynchronizationQueue {
 
     public abstract void fullSync();
 
+    public abstract void syncEpisodesFromServer();
+
     public abstract void syncIfNotSyncedRecently();
 
     public abstract void clear();

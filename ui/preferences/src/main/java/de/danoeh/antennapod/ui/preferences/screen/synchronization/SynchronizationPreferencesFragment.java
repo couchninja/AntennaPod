@@ -41,6 +41,7 @@ public class SynchronizationPreferencesFragment extends AnimatedPreferenceFragme
     private static final String PREFERENCE_GPODNET_SETLOGIN_INFORMATION = "pref_gpodnet_setlogin_information";
     private static final String PREFERENCE_SYNC = "pref_synchronization_sync";
     private static final String PREFERENCE_FORCE_FULL_SYNC = "pref_synchronization_force_full_sync";
+    private static final String PREFERENCE_EPISODES_FROM_SERVER = "pref_synchronization_episodes_from_server";
     private static final String PREFERENCE_LOGOUT = "pref_synchronization_logout";
 
     @Override
@@ -104,6 +105,10 @@ public class SynchronizationPreferencesFragment extends AnimatedPreferenceFragme
             SynchronizationQueue.getInstance().fullSync();
             return true;
         });
+        findPreference(PREFERENCE_EPISODES_FROM_SERVER).setOnPreferenceClickListener(preference -> {
+            SynchronizationQueue.getInstance().syncEpisodesFromServer();
+            return true;
+        });
         findPreference(PREFERENCE_LOGOUT).setOnPreferenceClickListener(preference -> {
             SynchronizationCredentials.clear();
             SynchronizationQueue.getInstance().clear();
@@ -140,6 +145,7 @@ public class SynchronizationPreferencesFragment extends AnimatedPreferenceFragme
         gpodnetSetLoginPreference.setEnabled(loggedIn);
         findPreference(PREFERENCE_SYNC).setEnabled(loggedIn);
         findPreference(PREFERENCE_FORCE_FULL_SYNC).setEnabled(loggedIn);
+        findPreference(PREFERENCE_EPISODES_FROM_SERVER).setEnabled(loggedIn);
         findPreference(PREFERENCE_LOGOUT).setEnabled(loggedIn);
         if (loggedIn) {
             String summary = getString(R.string.synchronization_login_status,

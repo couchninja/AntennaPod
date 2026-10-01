@@ -776,6 +776,8 @@
     <string name="synchronization_sync_summary">Synchronize subscription and episode state changes</string>
     <string name="synchronization_full_sync_title">Force full synchronization</string>
     <string name="synchronization_force_sync_summary">Re-synchronize all subscriptions and episode states</string>
+    <string name="synchronization_episodes_from_server_title">Download episode states from server</string>
+    <string name="synchronization_episodes_from_server_summary">Apply gpodder play state from the server without uploading local changes</string>
     <string name="synchronization_logout">Logout</string>
     <string name="synchronization_login_status">Logged in as %1$s on %2$s.\n\nYou can choose your synchronization provider again once you have logged out.</string>
     <string name="pref_synchronization_logout_toast">Logout was successful</string>

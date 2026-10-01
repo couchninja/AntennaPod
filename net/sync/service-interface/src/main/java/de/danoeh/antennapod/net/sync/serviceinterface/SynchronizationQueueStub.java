@@ -16,6 +16,10 @@ public class SynchronizationQueueStub extends SynchronizationQueue {
     }
 
     @Override
+    public void syncEpisodesFromServer() {
+    }
+
+    @Override
     public void syncIfNotSyncedRecently() {
     }
 

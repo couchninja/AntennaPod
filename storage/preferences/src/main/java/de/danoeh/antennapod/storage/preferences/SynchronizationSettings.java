@@ -29,6 +29,10 @@ public class SynchronizationSettings {
                 .apply();
     }
 
+    public static void resetEpisodeActionSynchronizationTimestamp() {
+        prefs.edit().putLong(LAST_EPISODE_ACTIONS_SYNC_TIMESTAMP, 0).apply();
+    }
+
     public static boolean isLastSyncSuccessful() {
         return prefs.getBoolean(LAST_SYNC_ATTEMPT_SUCCESS, false);
     }
