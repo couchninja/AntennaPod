@@ -65,15 +65,9 @@ public class EpisodeAction {
             return null;
         }
         EpisodeAction.Builder builder = new EpisodeAction.Builder(podcast, episode, action);
-        String utcTimestamp = object.optString("timestamp", null);
-        if (!TextUtils.isEmpty(utcTimestamp)) {
-            try {
-                SimpleDateFormat parser = new SimpleDateFormat(PATTERN_ISO_DATEFORMAT, Locale.US);
-                parser.setTimeZone(TimeZone.getTimeZone("UTC"));
-                builder.timestamp(parser.parse(utcTimestamp));
-            } catch (ParseException e) {
-                e.printStackTrace();
-            }
+        Date actionTimestamp = readTimestampFromJsonObject(object);
+        if (actionTimestamp != null) {
+            builder.timestamp(actionTimestamp);
         }
         String guid = object.optString("guid", null);
         if (!TextUtils.isEmpty(guid)) {
@@ -91,6 +85,64 @@ public class EpisodeAction {
             }
         }
         return builder.build();
+    }
+
+    private static Date readTimestampFromJsonObject(JSONObject object) {
+        if (!object.has("timestamp") || object.isNull("timestamp")) {
+            return null;
+        }
+        try {
+            Object value = object.get("timestamp");
+            if (value instanceof Number) {
+                long epoch = ((Number) value).longValue();
+                if (epoch > 1_000_000_000_000L) {
+                    return new Date(epoch);
+                }
+                return new Date(epoch * 1000L);
+            }
+            if (value instanceof String) {
+                return parseTimestampString((String) value);
+            }
+        } catch (JSONException e) {
+            Log.e(TAG, "readTimestampFromJsonObject(): " + e.getMessage());
+        }
+        return null;
+    }
+
+    private static Date parseTimestampString(String utcTimestamp) {
+        if (TextUtils.isEmpty(utcTimestamp)) {
+            return null;
+        }
+        for (int fractionIndex = utcTimestamp.indexOf('.'); fractionIndex > 0; fractionIndex = -1) {
+            int endIndex = utcTimestamp.length();
+            for (int i = fractionIndex + 1; i < utcTimestamp.length(); i++) {
+                char c = utcTimestamp.charAt(i);
+                if (c < '0' || c > '9') {
+                    endIndex = i;
+                    break;
+                }
+            }
+            utcTimestamp = utcTimestamp.substring(0, fractionIndex) + utcTimestamp.substring(endIndex);
+            break;
+        }
+        if (utcTimestamp.endsWith("Z")) {
+            utcTimestamp = utcTimestamp.substring(0, utcTimestamp.length() - 1);
+        }
+        try {
+            SimpleDateFormat parser = new SimpleDateFormat(PATTERN_ISO_DATEFORMAT, Locale.US);
+            parser.setTimeZone(TimeZone.getTimeZone("UTC"));
+            return parser.parse(utcTimestamp);
+        } catch (ParseException e) {
+            try {
+                long epoch = Long.parseLong(utcTimestamp);
+                if (epoch > 1_000_000_000_000L) {
+                    return new Date(epoch);
+                }
+                return new Date(epoch * 1000L);
+            } catch (NumberFormatException numberFormatException) {
+                return null;
+            }
+        }
     }
 
     public String getPodcast() {

@@ -268,12 +268,12 @@ public class SyncService extends Worker {
             return;
         }
 
-        Map<Pair<String, String>, EpisodeAction> playActionsToUpdate = EpisodeActionFilter
+        Map<Pair<String, String>, EpisodeAction> actionsToUpdate = EpisodeActionFilter
                 .getRemoteActionsOverridingLocalActions(remoteActions,
                         synchronizationQueueStorage.getQueuedEpisodeActions());
         LongList queueToBeRemoved = new LongList();
         List<FeedItem> updatedItems = new ArrayList<>();
-        for (EpisodeAction action : playActionsToUpdate.values()) {
+        for (EpisodeAction action : actionsToUpdate.values()) {
             String guid = GuidValidator.isValidGuid(action.getGuid()) ? action.getGuid() : null;
             FeedItem feedItem = DBReader.getFeedItemByGuidOrEpisodeUrl(guid, action.getEpisode());
             if (feedItem == null) {
@@ -284,11 +284,25 @@ public class SyncService extends Worker {
                 Log.i(TAG, "Feed item has no media: " + action);
                 continue;
             }
+            if (action.getAction() == EpisodeAction.Action.NEW) {
+                Log.d(TAG, "Marking as unplayed: " + action);
+                feedItem.setPlayed(false);
+                updatedItems.add(feedItem);
+                continue;
+            }
             FeedMedia media = feedItem.getMedia();
-            media.setPosition(action.getPosition() * 1000);
             int smartMarkAsPlayedSecs = UserPreferences.getSmartMarkAsPlayedSecs();
-            boolean almostEnded = media.getDuration() > 0
+            if (action.getPosition() >= 0) {
+                media.setPosition(action.getPosition() * 1000);
+            }
+            boolean almostEnded = action.getPosition() >= 0 && media.getDuration() > 0
                     && media.getPosition() >= media.getDuration() - smartMarkAsPlayedSecs * 1000;
+            boolean localAlmostEnded = !feedItem.isPlayed() && media.getDuration() > 0
+                    && media.getPosition() >= media.getDuration() - smartMarkAsPlayedSecs * 1000;
+            if (almostEnded && localAlmostEnded) {
+                Log.d(TAG, "Skipping remote PLAY for locally unplayed episode: " + action);
+                continue;
+            }
             if (almostEnded) {
                 Log.d(TAG, "Marking as played: " + action);
                 feedItem.setPlayed(true);

@@ -1,10 +1,9 @@
 package de.danoeh.antennapod.net.sync.service;
 
-import android.util.Log;
-
 import androidx.collection.ArrayMap;
 import androidx.core.util.Pair;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -12,58 +11,71 @@ import de.danoeh.antennapod.net.sync.serviceinterface.EpisodeAction;
 
 public class EpisodeActionFilter {
 
-    public static final String TAG = "EpisodeActionFilter";
-
     public static Map<Pair<String, String>, EpisodeAction> getRemoteActionsOverridingLocalActions(
             List<EpisodeAction> remoteActions,
             List<EpisodeAction> queuedEpisodeActions) {
-        // make sure more recent local actions are not overwritten by older remote actions
+        Map<Pair<String, String>, EpisodeAction> remoteLatestRelevantActions =
+                getLatestRelevantActionsPerEpisode(remoteActions);
+        Map<Pair<String, String>, EpisodeAction> localMostRecentRelevantActions =
+                getLatestRelevantActionsPerEpisode(queuedEpisodeActions);
+
         Map<Pair<String, String>, EpisodeAction> remoteActionsThatOverrideLocalActions = new ArrayMap<>();
-        Map<Pair<String, String>, EpisodeAction> localMostRecentPlayActions =
-                createUniqueLocalMostRecentPlayActions(queuedEpisodeActions);
-        for (EpisodeAction remoteAction : remoteActions) {
-            Pair<String, String> key = new Pair<>(remoteAction.getPodcast(), remoteAction.getEpisode());
-            switch (remoteAction.getAction()) {
-                case NEW:
-                case DOWNLOAD:
-                    break;
-                case PLAY:
-                    EpisodeAction localMostRecent = localMostRecentPlayActions.get(key);
-                    if (secondActionOverridesFirstAction(remoteAction, localMostRecent)) {
-                        break;
-                    }
-                    EpisodeAction remoteMostRecentAction = remoteActionsThatOverrideLocalActions.get(key);
-                    if (secondActionOverridesFirstAction(remoteAction, remoteMostRecentAction)) {
-                        break;
-                    }
-                    remoteActionsThatOverrideLocalActions.put(key, remoteAction);
-                    break;
-                case DELETE:
-                    // NEVER EVER call DBWriter.deleteFeedMediaOfItem() here, leads to an infinite loop
-                    break;
-                default:
-                    Log.e(TAG, "Unknown remoteAction: " + remoteAction);
-                    break;
+        for (Map.Entry<Pair<String, String>, EpisodeAction> entry : remoteLatestRelevantActions.entrySet()) {
+            EpisodeAction remoteAction = entry.getValue();
+            EpisodeAction localMostRecent = localMostRecentRelevantActions.get(entry.getKey());
+            if (secondActionOverridesFirstAction(remoteAction, localMostRecent)) {
+                continue;
             }
+            remoteActionsThatOverrideLocalActions.put(entry.getKey(), remoteAction);
         }
 
         return remoteActionsThatOverrideLocalActions;
     }
 
-    private static Map<Pair<String, String>, EpisodeAction> createUniqueLocalMostRecentPlayActions(
-            List<EpisodeAction> queuedEpisodeActions) {
-        Map<Pair<String, String>, EpisodeAction> localMostRecentPlayAction;
-        localMostRecentPlayAction = new ArrayMap<>();
-        for (EpisodeAction action : queuedEpisodeActions) {
+    private static Map<Pair<String, String>, EpisodeAction> getLatestRelevantActionsPerEpisode(
+            List<EpisodeAction> actions) {
+        Map<Pair<String, String>, EpisodeAction> latestRelevantAction = new ArrayMap<>();
+        for (EpisodeAction action : actions) {
+            if (!isRelevantForPlaybackState(action.getAction())) {
+                continue;
+            }
             Pair<String, String> key = new Pair<>(action.getPodcast(), action.getEpisode());
-            EpisodeAction mostRecent = localMostRecentPlayAction.get(key);
-            if (mostRecent == null || mostRecent.getTimestamp() == null) {
-                localMostRecentPlayAction.put(key, action);
-            } else if (mostRecent.getTimestamp().before(action.getTimestamp())) {
-                localMostRecentPlayAction.put(key, action);
+            EpisodeAction mostRecent = latestRelevantAction.get(key);
+            if (shouldPreferAction(mostRecent, action)) {
+                latestRelevantAction.put(key, action);
             }
         }
-        return localMostRecentPlayAction;
+        return latestRelevantAction;
+    }
+
+    private static boolean shouldPreferAction(EpisodeAction current, EpisodeAction candidate) {
+        if (current == null) {
+            return true;
+        }
+        Date currentTimestamp = current.getTimestamp();
+        Date candidateTimestamp = candidate.getTimestamp();
+        if (candidateTimestamp == null && currentTimestamp != null) {
+            return false;
+        }
+        if (candidateTimestamp != null && currentTimestamp == null) {
+            return true;
+        }
+        if (candidateTimestamp != null && currentTimestamp != null) {
+            int compare = candidateTimestamp.compareTo(currentTimestamp);
+            if (compare > 0) {
+                return true;
+            }
+            if (compare < 0) {
+                return false;
+            }
+            return candidate.getAction() == EpisodeAction.Action.NEW
+                    && current.getAction() == EpisodeAction.Action.PLAY;
+        }
+        return true;
+    }
+
+    private static boolean isRelevantForPlaybackState(EpisodeAction.Action action) {
+        return action == EpisodeAction.Action.PLAY || action == EpisodeAction.Action.NEW;
     }
 
     private static boolean secondActionOverridesFirstAction(EpisodeAction firstAction,
