@@ -139,7 +139,7 @@ public class SynchronizationQueueImpl extends SynchronizationQueue {
                 || media.getItem().getFeed().getState() == Feed.STATE_NOT_SUBSCRIBED) {
             return;
         }
-        if (media.getStartPosition() < 0 || (!completed && media.getStartPosition() >= media.getPosition())) {
+        if (media.getStartPosition() < 0) {
             return;
         }
         EpisodeAction action = new EpisodeAction.Builder(media.getItem(), EpisodeAction.PLAY)
