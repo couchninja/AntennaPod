@@ -424,8 +424,9 @@
     <string name="pref_smart_queue_settings_summary">Choose podcasts and how many episodes to add from each</string>
     <string name="pref_smart_queue_downloaded_only_title">Downloaded episodes only</string>
     <string name="pref_smart_queue_downloaded_only_summary">Only add episodes that are already downloaded</string>
-    <string name="pref_smart_queue_predictive_download_title">Predictive download</string>
+    <string name="pref_smart_queue_predictive_download_title">Smart queue predictive download</string>
     <string name="pref_smart_queue_predictive_download_summary">Download upcoming smart queue episodes in advance</string>
+    <string name="pref_smart_queue_predictive_download_enqueue_warning">With both \"%1$s\" and \"%2$s\" enabled, episodes downloaded ahead of the smart queue will also be added to the queue, so you may see episodes that are out of order.</string>
     <string name="smart_queue_add_podcast">Add podcast</string>
     <string name="smart_queue_pick_podcast">Choose podcast</string>
     <string name="smart_queue_episode_direction_first">First</string>

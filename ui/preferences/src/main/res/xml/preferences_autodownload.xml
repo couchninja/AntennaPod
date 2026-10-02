@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        xmlns:search="http://schemas.android.com/apk/com.bytehamster.lib.preferencesearch">
 
     <SwitchPreferenceCompat
             android:defaultValue="false"
@@ -16,6 +18,12 @@
             android:key="prefSmartQueuePredictiveDownload"
             android:title="@string/pref_smart_queue_predictive_download_title"
             android:summary="@string/pref_smart_queue_predictive_download_summary"/>
+    <Preference
+            android:key="prefSmartQueuePredictiveDownloadEnqueueWarning"
+            android:iconSpaceReserved="true"
+            android:selectable="false"
+            app:isPreferenceVisible="false"
+            search:ignore="true"/>
     <de.danoeh.antennapod.ui.preferences.preference.MaterialListPreference
             android:defaultValue="25"
             android:entries="@array/episode_cache_size_entries"

@@ -11,6 +11,7 @@ import androidx.preference.Preference;
 import androidx.preference.SwitchPreferenceCompat;
 import de.danoeh.antennapod.R;
 import de.danoeh.antennapod.storage.preferences.UserPreferences;
+import de.danoeh.antennapod.ui.preferences.SmartQueueEnqueueDownloadWarningHelper;
 import de.danoeh.antennapod.ui.preferences.screen.AnimatedPreferenceFragment;
 import de.danoeh.antennapod.ui.screen.feed.preferences.SkipPreferenceDialog;
 import de.danoeh.antennapod.ui.screen.playback.VariableSpeedDialog;
@@ -28,6 +29,13 @@ public class PlaybackPreferencesFragment extends AnimatedPreferenceFragment {
 
         setupPlaybackScreen();
         buildSmartMarkAsPlayedPreference();
+        SmartQueueEnqueueDownloadWarningHelper.setup(this);
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        SmartQueueEnqueueDownloadWarningHelper.updateWarnings(this);
     }
 
     @Override

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:search="http://schemas.android.com/apk/com.bytehamster.lib.preferencesearch">
 
     <PreferenceCategory android:title="@string/interruptions">
@@ -72,6 +73,12 @@
                 android:key="prefEnqueueDownloaded"
                 android:summary="@string/pref_enqueue_downloaded_summary"
                 android:title="@string/pref_enqueue_downloaded_title" />
+        <Preference
+                android:key="prefSmartQueuePredictiveDownloadEnqueueWarning"
+                android:iconSpaceReserved="true"
+                android:selectable="false"
+                app:isPreferenceVisible="false"
+                search:ignore="true"/>
         <SwitchPreferenceCompat
                 android:defaultValue="true"
                 android:enabled="true"
