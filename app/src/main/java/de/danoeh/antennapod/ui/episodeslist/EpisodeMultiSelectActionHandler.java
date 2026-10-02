@@ -99,23 +99,39 @@ public class EpisodeMultiSelectActionHandler {
         showMessage(R.plurals.removed_from_inbox_batch_label, markUnplayed.size());
     }
 
+    static void enqueueEpisodeMarkedAsPlayed(FeedItem item) {
+        if (item.getFeed().isLocalFeed() || item.getFeed().getState() == Feed.STATE_NOT_SUBSCRIBED
+                || !SynchronizationSettings.isProviderConnected()) {
+            return;
+        }
+        FeedMedia media = item.getMedia();
+        if (media == null) {
+            return;
+        }
+        EpisodeAction actionPlay = new EpisodeAction.Builder(item, EpisodeAction.PLAY)
+                .currentTimestamp()
+                .started(media.getDuration() / 1000)
+                .position(media.getDuration() / 1000)
+                .total(media.getDuration() / 1000)
+                .build();
+        SynchronizationQueue.getInstance().enqueueEpisodeAction(actionPlay);
+    }
+
+    static void enqueueEpisodeMarkedAsUnplayed(FeedItem item) {
+        if (item.getFeed().isLocalFeed() || item.getMedia() == null
+                || item.getFeed().getState() == Feed.STATE_NOT_SUBSCRIBED) {
+            return;
+        }
+        SynchronizationQueue.getInstance().enqueueEpisodeAction(
+                new EpisodeAction.Builder(item, EpisodeAction.NEW)
+                        .currentTimestamp()
+                        .build());
+    }
+
     private void markedCheckedPlayed(List<FeedItem> items) {
         for (FeedItem item : items) {
             item.setPlayed(true);
-            if (!item.getFeed().isLocalFeed() && item.getFeed().getState() != Feed.STATE_NOT_SUBSCRIBED
-                    && SynchronizationSettings.isProviderConnected()) {
-                FeedMedia media = item.getMedia();
-                // not all items have media, Gpodder only cares about those that do
-                if (media != null) {
-                    EpisodeAction actionPlay = new EpisodeAction.Builder(item, EpisodeAction.PLAY)
-                            .currentTimestamp()
-                            .started(media.getDuration() / 1000)
-                            .position(media.getDuration() / 1000)
-                            .total(media.getDuration() / 1000)
-                            .build();
-                    SynchronizationQueue.getInstance().enqueueEpisodeAction(actionPlay);
-                }
-            }
+            enqueueEpisodeMarkedAsPlayed(item);
         }
         DBWriter.markItemsPlayed(FeedItem.PLAYED, true, items);
         showMessage(R.plurals.marked_as_played_message, items.size());
@@ -124,13 +140,7 @@ public class EpisodeMultiSelectActionHandler {
     private void markedCheckedUnplayed(List<FeedItem> items) {
         for (FeedItem item : items) {
             item.setPlayed(false);
-            if (!item.getFeed().isLocalFeed() && item.getMedia() != null
-                    && item.getFeed().getState() != Feed.STATE_NOT_SUBSCRIBED) {
-                SynchronizationQueue.getInstance().enqueueEpisodeAction(
-                        new EpisodeAction.Builder(item, EpisodeAction.NEW)
-                                .currentTimestamp()
-                                .build());
-            }
+            enqueueEpisodeMarkedAsUnplayed(item);
         }
         DBWriter.markItemsPlayed(FeedItem.UNPLAYED, false, items);
         showMessage(R.plurals.marked_as_unplayed_message, items.size());
