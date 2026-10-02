@@ -20,6 +20,9 @@ import de.danoeh.antennapod.R;
 import de.danoeh.antennapod.event.MessageEvent;
 import de.danoeh.antennapod.model.feed.Feed;
 import de.danoeh.antennapod.net.download.serviceinterface.DownloadServiceInterface;
+import de.danoeh.antennapod.net.sync.serviceinterface.EpisodeAction;
+import de.danoeh.antennapod.net.sync.serviceinterface.SynchronizationQueue;
+import de.danoeh.antennapod.storage.preferences.SynchronizationSettings;
 import de.danoeh.antennapod.storage.preferences.PlaybackPreferences;
 import de.danoeh.antennapod.playback.service.PlaybackController;
 import de.danoeh.antennapod.storage.database.DBWriter;
@@ -251,6 +254,11 @@ public class FeedItemMenuHandler {
         Log.d(TAG, "markReadWithUndo(" + item.getId() + ")");
         // we're marking it as unplayed since the user didn't actually play it
         // but they don't want it considered 'NEW' anymore
+        if (playState == FeedItem.PLAYED) {
+            enqueueGpodderMarkPlayedAction(item);
+        } else if (playState == FeedItem.UNPLAYED && item.isPlayed()) {
+            enqueueGpodderMarkUnplayedAction(item);
+        }
         DBWriter.markItemsPlayed(playState, false, Collections.singletonList(item));
 
         Context context = fragment.requireContext();
@@ -302,6 +310,35 @@ public class FeedItemMenuHandler {
 
     public static void removeNewFlagWithUndo(@NonNull Fragment fragment, FeedItem item) {
         markReadWithUndo(fragment, item, FeedItem.UNPLAYED, false);
+    }
+
+    static void enqueueGpodderMarkPlayedAction(FeedItem item) {
+        if (item.getFeed().isLocalFeed() || item.getFeed().getState() == Feed.STATE_NOT_SUBSCRIBED
+                || !SynchronizationSettings.isProviderConnected()) {
+            return;
+        }
+        FeedMedia media = item.getMedia();
+        if (media == null) {
+            return;
+        }
+        SynchronizationQueue.getInstance().enqueueEpisodeAction(
+                new EpisodeAction.Builder(item, EpisodeAction.PLAY)
+                        .currentTimestamp()
+                        .started(media.getDuration() / 1000)
+                        .position(media.getDuration() / 1000)
+                        .total(media.getDuration() / 1000)
+                        .build());
+    }
+
+    static void enqueueGpodderMarkUnplayedAction(FeedItem item) {
+        if (item.getFeed().isLocalFeed() || item.getMedia() == null
+                || item.getFeed().getState() == Feed.STATE_NOT_SUBSCRIBED) {
+            return;
+        }
+        SynchronizationQueue.getInstance().enqueueEpisodeAction(
+                new EpisodeAction.Builder(item, EpisodeAction.NEW)
+                        .currentTimestamp()
+                        .build());
     }
 
 }
