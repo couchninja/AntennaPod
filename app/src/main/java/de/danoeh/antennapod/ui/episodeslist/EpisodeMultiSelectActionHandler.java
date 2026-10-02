@@ -8,6 +8,7 @@ import androidx.fragment.app.FragmentActivity;
 import androidx.annotation.PluralsRes;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import de.danoeh.antennapod.R;
@@ -122,9 +123,19 @@ public class EpisodeMultiSelectActionHandler {
                 || item.getFeed().getState() == Feed.STATE_NOT_SUBSCRIBED) {
             return;
         }
+        Date timestamp = new Date();
+        FeedMedia media = item.getMedia();
+        int totalSeconds = media.getDuration() / 1000;
         SynchronizationQueue.getInstance().enqueueEpisodeAction(
                 new EpisodeAction.Builder(item, EpisodeAction.NEW)
-                        .currentTimestamp()
+                        .timestamp(timestamp)
+                        .build());
+        SynchronizationQueue.getInstance().enqueueEpisodeAction(
+                new EpisodeAction.Builder(item, EpisodeAction.PLAY)
+                        .timestamp(timestamp)
+                        .started(0)
+                        .position(0)
+                        .total(totalSeconds)
                         .build());
     }
 
