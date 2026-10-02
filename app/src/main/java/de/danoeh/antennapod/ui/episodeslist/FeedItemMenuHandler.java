@@ -251,6 +251,11 @@ public class FeedItemMenuHandler {
         Log.d(TAG, "markReadWithUndo(" + item.getId() + ")");
         // we're marking it as unplayed since the user didn't actually play it
         // but they don't want it considered 'NEW' anymore
+        if (playState == FeedItem.PLAYED) {
+            EpisodeMultiSelectActionHandler.enqueueEpisodeMarkedAsPlayed(item);
+        } else if (playState == FeedItem.UNPLAYED) {
+            EpisodeMultiSelectActionHandler.enqueueEpisodeMarkedAsUnplayed(item);
+        }
         DBWriter.markItemsPlayed(playState, false, Collections.singletonList(item));
 
         Context context = fragment.requireContext();
