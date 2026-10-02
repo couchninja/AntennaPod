@@ -125,8 +125,10 @@ public abstract class WidgetUpdater {
         } else {
             // start the app if they click anything
             views.setOnClickPendingIntent(R.id.layout_left, startMediaPlayer);
-            views.setOnClickPendingIntent(R.id.butPlay, startMediaPlayer);
-            views.setOnClickPendingIntent(R.id.butPlayCenter, startMediaPlayer);
+            views.setOnClickPendingIntent(R.id.butPlay,
+                    MediaButtonStarter.createPendingIntent(context, Player.COMMAND_PLAY_PAUSE));
+            views.setOnClickPendingIntent(R.id.butPlayCenter,
+                    MediaButtonStarter.createPendingIntent(context, Player.COMMAND_PLAY_PAUSE));
             views.setOnClickPendingIntent(R.id.butPlayExtended,
                     MediaButtonStarter.createPendingIntent(context, Player.COMMAND_PLAY_PAUSE));
             views.setViewVisibility(R.id.txtvProgress, View.GONE);
