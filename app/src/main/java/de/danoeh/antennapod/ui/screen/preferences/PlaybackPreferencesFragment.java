@@ -57,23 +57,6 @@ public class PlaybackPreferencesFragment extends AnimatedPreferenceFragment {
         }
 
         buildEnqueueLocationPreference();
-        setupSmartQueuePreferences();
-    }
-
-    private void setupSmartQueuePreferences() {
-        SwitchPreferenceCompat smartQueueEnabled = requirePreference(UserPreferences.PREF_SMART_QUEUE_ENABLED);
-        Preference smartQueueSettings = requirePreference(UserPreferences.PREF_SMART_QUEUE_SETTINGS);
-        smartQueueSettings.setVisible(smartQueueEnabled.isChecked());
-        smartQueueEnabled.setOnPreferenceChangeListener((preference, newValue) -> {
-            if (newValue instanceof Boolean) {
-                smartQueueSettings.setVisible((Boolean) newValue);
-            }
-            return true;
-        });
-        smartQueueSettings.setOnPreferenceClickListener(preference -> {
-            ((PreferenceActivity) getActivity()).openScreen(R.xml.preferences_smart_queue);
-            return true;
-        });
     }
 
     private void buildEnqueueLocationPreference() {

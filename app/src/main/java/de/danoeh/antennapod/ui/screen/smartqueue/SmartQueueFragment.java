@@ -1,10 +1,8 @@
-package de.danoeh.antennapod.ui.screen.preferences;
+package de.danoeh.antennapod.ui.screen.smartqueue;
 
 import android.graphics.Canvas;
 import android.os.Bundle;
 import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
@@ -19,12 +17,14 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.collection.ArrayMap;
-import androidx.core.view.MenuProvider;
+import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.materialswitch.MaterialSwitch;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -33,27 +33,30 @@ import java.util.Map;
 import java.util.Set;
 
 import de.danoeh.antennapod.R;
+import de.danoeh.antennapod.activity.MainActivity;
 import de.danoeh.antennapod.ui.CoverLoader;
 import de.danoeh.antennapod.model.feed.Feed;
 import de.danoeh.antennapod.model.feed.SmartQueueRule;
 import de.danoeh.antennapod.storage.database.DBReader;
 import de.danoeh.antennapod.storage.preferences.UserPreferences;
 import de.danoeh.antennapod.ui.common.ThemeUtils;
-import de.danoeh.antennapod.ui.preferences.screen.AnimatedPreferenceFragment;
 import it.xabaras.android.recyclerview.swipedecorator.RecyclerViewSwipeDecorator;
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
 import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 
-public class SmartQueueSettingsFragment extends AnimatedPreferenceFragment {
-    @Override
-    public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
-    }
+public class SmartQueueFragment extends Fragment {
+    public static final String TAG = "SmartQueueFragment";
+
+    private static final float DISABLED_ALPHA = 0.4f;
 
     private final List<SmartQueueRuleEntry> entries = new ArrayList<>();
     private SmartQueueRulesAdapter adapter;
     private Disposable disposable;
     private ItemTouchHelper itemTouchHelper;
+    private RecyclerView recyclerView;
+    private FloatingActionButton addButton;
+    private boolean smartQueueEnabled;
 
     @Nullable
     @Override
@@ -61,7 +64,17 @@ public class SmartQueueSettingsFragment extends AnimatedPreferenceFragment {
                              @Nullable Bundle savedInstanceState) {
         View root = inflater.inflate(R.layout.smart_queue_settings_fragment, container, false);
 
-        RecyclerView recyclerView = root.findViewById(R.id.recyclerView);
+        MaterialToolbar toolbar = root.findViewById(R.id.toolbar);
+        ((MainActivity) requireActivity()).setupToolbarToggle(toolbar, false);
+
+        MaterialSwitch enabledSwitch = root.findViewById(R.id.enabledSwitch);
+        enabledSwitch.setChecked(UserPreferences.isSmartQueueEnabled());
+        enabledSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            UserPreferences.setSmartQueueEnabled(isChecked);
+            updateEnabledState(isChecked);
+        });
+
+        recyclerView = root.findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         adapter = new SmartQueueRulesAdapter();
         recyclerView.setAdapter(adapter);
@@ -70,6 +83,9 @@ public class SmartQueueSettingsFragment extends AnimatedPreferenceFragment {
             @Override
             public int getMovementFlags(@NonNull RecyclerView recyclerView,
                                           @NonNull RecyclerView.ViewHolder viewHolder) {
+                if (!smartQueueEnabled) {
+                    return 0;
+                }
                 return makeMovementFlags(ItemTouchHelper.UP | ItemTouchHelper.DOWN,
                         ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT);
             }
@@ -128,48 +144,24 @@ public class SmartQueueSettingsFragment extends AnimatedPreferenceFragment {
         });
         itemTouchHelper.attachToRecyclerView(recyclerView);
 
-        FloatingActionButton addButton = root.findViewById(R.id.addPodcastButton);
+        addButton = root.findViewById(R.id.addPodcastButton);
         addButton.setOnClickListener(v -> showFeedPicker());
+        updateEnabledState(UserPreferences.isSmartQueueEnabled());
         loadEntries();
         return root;
     }
 
-    @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-        requireActivity().addMenuProvider(new MenuProvider() {
-            @Override
-            public void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
-                menuInflater.inflate(R.menu.smart_queue_settings, menu);
-                MenuItem downloadedOnly = menu.findItem(R.id.smart_queue_downloaded_only_item);
-                downloadedOnly.setChecked(UserPreferences.isSmartQueueDownloadedOnly());
-                MenuItem predictiveDownload = menu.findItem(R.id.smart_queue_predictive_download_item);
-                predictiveDownload.setChecked(UserPreferences.isSmartQueuePredictiveDownloadEnabled());
-            }
-
-            @Override
-            public boolean onMenuItemSelected(@NonNull MenuItem menuItem) {
-                if (menuItem.getItemId() == R.id.smart_queue_downloaded_only_item) {
-                    menuItem.setChecked(!menuItem.isChecked());
-                    UserPreferences.setSmartQueueDownloadedOnly(menuItem.isChecked());
-                    return true;
-                }
-                if (menuItem.getItemId() == R.id.smart_queue_predictive_download_item) {
-                    menuItem.setChecked(!menuItem.isChecked());
-                    UserPreferences.setSmartQueuePredictiveDownloadEnabled(menuItem.isChecked());
-                    return true;
-                }
-                return false;
-            }
-        }, getViewLifecycleOwner());
-    }
-
-    @Override
-    public void onStart() {
-        super.onStart();
-        if (getActivity() instanceof PreferenceActivity) {
-            ((PreferenceActivity) getActivity()).getSupportActionBar()
-                    .setTitle(R.string.smart_queue_screen_title);
+    private void updateEnabledState(boolean enabled) {
+        smartQueueEnabled = enabled;
+        if (recyclerView != null) {
+            recyclerView.setAlpha(enabled ? 1f : DISABLED_ALPHA);
+        }
+        if (addButton != null) {
+            addButton.setEnabled(enabled);
+            addButton.setAlpha(enabled ? 1f : DISABLED_ALPHA);
+        }
+        if (adapter != null) {
+            adapter.notifyDataSetChanged();
         }
     }
 
@@ -334,8 +326,8 @@ public class SmartQueueSettingsFragment extends AnimatedPreferenceFragment {
                 ArrayAdapter<String> directionAdapter = new ArrayAdapter<>(itemView.getContext(),
                         android.R.layout.simple_spinner_item,
                         new String[]{
-                                itemView.getContext().getString(R.string.smart_queue_episode_direction_top),
-                                itemView.getContext().getString(R.string.smart_queue_episode_direction_bottom)
+                                itemView.getContext().getString(R.string.smart_queue_episode_direction_first),
+                                itemView.getContext().getString(R.string.smart_queue_episode_direction_last)
                         });
                 directionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
                 directionSpinner.setAdapter(directionAdapter);
@@ -373,6 +365,9 @@ public class SmartQueueSettingsFragment extends AnimatedPreferenceFragment {
                 episodeCountSpinner.setOnItemSelectedListener(spinnerListener);
 
                 dragHandle.setOnTouchListener((v, event) -> {
+                    if (!smartQueueEnabled) {
+                        return false;
+                    }
                     if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
                         itemTouchHelper.startDrag(this);
                     }
@@ -380,6 +375,9 @@ public class SmartQueueSettingsFragment extends AnimatedPreferenceFragment {
                 });
 
                 itemView.setOnLongClickListener(v -> {
+                    if (!smartQueueEnabled) {
+                        return false;
+                    }
                     int pos = getBindingAdapterPosition();
                     if (pos < 0 || pos >= entries.size()) {
                         return false;
@@ -431,6 +429,10 @@ public class SmartQueueSettingsFragment extends AnimatedPreferenceFragment {
                 directionSpinner.setSelection(entry.rule.isFromTop() ? 0 : 1);
                 episodeCountSpinner.setSelection(entry.rule.getEpisodeCount() - 1);
                 bindingSpinners = false;
+
+                directionSpinner.setEnabled(smartQueueEnabled);
+                episodeCountSpinner.setEnabled(smartQueueEnabled);
+                dragHandle.setEnabled(smartQueueEnabled);
             }
         }
     }

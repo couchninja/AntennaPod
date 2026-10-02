@@ -6,6 +6,7 @@
         <item>NewEpisodesFragment</item>
         <item>SubscriptionFragment</item>
         <item>EpisodesFragment</item>
+        <item>SmartQueueFragment</item>
         <item>DownloadsFragment</item>
         <item>PlaybackHistoryFragment</item>
         <item>FavoritesFragment</item>

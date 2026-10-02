@@ -478,9 +478,7 @@ public class DBWriter {
         clearQueueStorage(adapter);
         applySmartQueueFillSynchronous(context, adapter,
                 SmartQueueRefiller.buildQueueItems(true));
-        if (!UserPreferences.isSmartQueueDownloadedOnly()) {
-            AutoDownloadManager.getInstance().autodownloadUndownloadedItems(context);
-        }
+        AutoDownloadManager.getInstance().autodownloadUndownloadedItems(context);
         adapter.close();
     }
 

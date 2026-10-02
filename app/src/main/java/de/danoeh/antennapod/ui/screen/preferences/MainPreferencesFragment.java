@@ -159,9 +159,6 @@ public class MainPreferencesFragment extends AnimatedPreferenceFragment {
                 .addBreadcrumb(PreferenceActivity.getTitleOfPage(R.xml.preferences_user_interface));
         config.index(R.xml.preferences_playback)
                 .addBreadcrumb(PreferenceActivity.getTitleOfPage(R.xml.preferences_playback));
-        config.index(R.xml.preferences_smart_queue)
-                .addBreadcrumb(PreferenceActivity.getTitleOfPage(R.xml.preferences_playback))
-                .addBreadcrumb(PreferenceActivity.getTitleOfPage(R.xml.preferences_smart_queue));
         config.index(R.xml.preferences_downloads)
                 .addBreadcrumb(PreferenceActivity.getTitleOfPage(R.xml.preferences_downloads));
         config.index(R.xml.preferences_import_export)

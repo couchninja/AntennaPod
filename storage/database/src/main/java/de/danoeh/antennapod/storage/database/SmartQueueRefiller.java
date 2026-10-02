@@ -43,7 +43,7 @@ public class SmartQueueRefiller {
 
     @NonNull
     public static List<FeedItem> buildQueueItems(boolean excludeCurrentlyPlaying) {
-        return pickItemsForRules(SmartQueueRule::getEpisodeCount, excludeCurrentlyPlaying, true);
+        return pickItemsForRules(SmartQueueRule::getEpisodeCount, excludeCurrentlyPlaying, false);
     }
 
     @NonNull

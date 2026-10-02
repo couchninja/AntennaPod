@@ -73,17 +73,6 @@
                 android:summary="@string/pref_enqueue_downloaded_summary"
                 android:title="@string/pref_enqueue_downloaded_title" />
         <SwitchPreferenceCompat
-                android:defaultValue="false"
-                android:enabled="true"
-                android:key="prefSmartQueueEnabled"
-                android:summary="@string/pref_smart_queue_summary"
-                android:title="@string/pref_smart_queue_title"/>
-        <Preference
-                android:key="prefSmartQueueSettings"
-                android:summary="@string/pref_smart_queue_settings_summary"
-                android:title="@string/pref_smart_queue_settings_title"
-                android:visible="false"/>
-        <SwitchPreferenceCompat
                 android:defaultValue="true"
                 android:enabled="true"
                 android:key="prefFollowQueue"

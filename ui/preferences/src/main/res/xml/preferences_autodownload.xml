@@ -11,6 +11,11 @@
             android:key="prefEnableAutoDlQueue"
             android:title="@string/pref_automatic_download_queue_title"
             android:summary="@string/pref_automatic_download_queue_description"/>
+    <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:key="prefSmartQueuePredictiveDownload"
+            android:title="@string/pref_smart_queue_predictive_download_title"
+            android:summary="@string/pref_smart_queue_predictive_download_summary"/>
     <de.danoeh.antennapod.ui.preferences.preference.MaterialListPreference
             android:defaultValue="25"
             android:entries="@array/episode_cache_size_entries"

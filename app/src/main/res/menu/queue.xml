@@ -26,7 +26,7 @@
 
     <item
         android:id="@+id/smart_queue_settings"
-        android:title="@string/pref_smart_queue_settings_title"
+        android:title="@string/smart_queue_screen_title"
         android:visible="false" />
 
     <item

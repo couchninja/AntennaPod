@@ -1,7 +1,6 @@
 package de.danoeh.antennapod.ui.screen.queue;
 
 import android.content.Context;
-import android.content.Intent;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -45,7 +44,7 @@ import java.util.List;
 
 import de.danoeh.antennapod.R;
 import de.danoeh.antennapod.activity.MainActivity;
-import de.danoeh.antennapod.ui.screen.preferences.PreferenceActivity;
+import de.danoeh.antennapod.ui.screen.smartqueue.SmartQueueFragment;
 import de.danoeh.antennapod.ui.episodeslist.EpisodeItemListAdapter;
 import de.danoeh.antennapod.ui.common.ConfirmationDialog;
 import de.danoeh.antennapod.ui.MenuItemUtils;
@@ -306,9 +305,7 @@ public class QueueFragment extends Fragment implements MaterialToolbar.OnMenuIte
             FeedUpdateManager.getInstance().runOnceOrAsk(requireContext());
             return true;
         } else if (itemId == R.id.smart_queue_settings) {
-            Intent intent = new Intent(getActivity(), PreferenceActivity.class);
-            intent.putExtra(PreferenceActivity.OPEN_SMART_QUEUE_SETTINGS, true);
-            startActivity(intent);
+            ((MainActivity) requireActivity()).loadFragment(SmartQueueFragment.TAG, null);
             return true;
         } else if (itemId == R.id.rebuild_smart_queue) {
             ConfirmationDialog rebuildDialog = new ConfirmationDialog(getActivity(),
