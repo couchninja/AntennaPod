@@ -23,7 +23,7 @@ public abstract class NavigationNames {
             case QueueFragment.TAG:
                 return R.drawable.ic_playlist_play;
             case SmartQueueFragment.TAG:
-                return R.drawable.ic_shuffle;
+                return R.drawable.ic_menu_open;
             case InboxFragment.TAG:
                 return R.drawable.ic_inbox;
             case AllEpisodesFragment.TAG:
