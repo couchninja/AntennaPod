@@ -1,5 +1,6 @@
 package de.danoeh.antennapod.ui.screen.download;
 
+import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Bundle;
 import android.util.Log;
@@ -9,8 +10,10 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.util.Pair;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -81,11 +84,14 @@ public class CompletedDownloadsFragment extends Fragment
     private ProgressBar progressBar;
     private MaterialToolbar toolbar;
     private SwipeRefreshLayout swipeRefreshLayout;
+    private TextView infoBar;
+    private int episodeCacheCount;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
         View root = inflater.inflate(R.layout.simple_list_fragment, container, false);
+        infoBar = root.findViewById(R.id.info_bar);
         toolbar = root.findViewById(R.id.toolbar);
         toolbar.setTitle(R.string.downloads_label);
         toolbar.inflateMenu(R.menu.downloads_completed);
@@ -308,14 +314,19 @@ public class CompletedDownloadsFragment extends Fragment
             disposable.dispose();
         }
         emptyView.hide();
+        Context context = requireContext();
         disposable = Observable.fromCallable(() -> {
             SortOrder sortOrder = UserPreferences.getDownloadsSortedOrder();
             List<FeedItem> downloadedItems = DBReader.getEpisodes(0, Integer.MAX_VALUE,
                     new FeedItemFilter(FeedItemFilter.DOWNLOADED, FeedItemFilter.INCLUDE_ALL_FEED_STATES), sortOrder);
 
+            int downloadedEpisodes = DBReader.getTotalEpisodeCount(
+                    new FeedItemFilter(FeedItemFilter.DOWNLOADED));
+            downloadedEpisodes += DownloadServiceInterface.get().getNumberOfActiveDownloads(context);
+
             List<String> mediaUrls = new ArrayList<>();
             if (runningDownloads == null) {
-                return downloadedItems;
+                return new Pair<>(downloadedItems, downloadedEpisodes);
             }
             for (String url : runningDownloads) {
                 if (EpisodeDownloadEvent.indexOfItemWithDownloadUrl(downloadedItems, url) != -1) {
@@ -325,16 +336,18 @@ public class CompletedDownloadsFragment extends Fragment
             }
             List<FeedItem> currentDownloads = DBReader.getFeedItemsWithUrl(mediaUrls);
             currentDownloads.addAll(downloadedItems);
-            return currentDownloads;
+            return new Pair<>(currentDownloads, downloadedEpisodes);
         })
         .subscribeOn(Schedulers.computation())
         .observeOn(AndroidSchedulers.mainThread())
         .subscribe(
                 result -> {
-                    items = result;
+                    items = result.first;
+                    episodeCacheCount = result.second;
                     adapter.setDummyViews(0);
                     progressBar.setVisibility(View.GONE);
-                    adapter.updateItems(result);
+                    adapter.updateItems(result.first);
+                    refreshInfoBar();
                 }, error -> {
                     adapter.setDummyViews(0);
                     adapter.updateItems(Collections.emptyList());
@@ -349,6 +362,7 @@ public class CompletedDownloadsFragment extends Fragment
         recyclerView.setPadding(recyclerView.getPaddingLeft(), recyclerView.getPaddingTop(),
                 recyclerView.getPaddingRight(),
                 (int) getResources().getDimension(R.dimen.floating_select_menu_height));
+        refreshInfoBar();
     }
 
     @Override
@@ -357,6 +371,21 @@ public class CompletedDownloadsFragment extends Fragment
         swipeActions.attachTo(recyclerView);
         recyclerView.setPadding(recyclerView.getPaddingLeft(), recyclerView.getPaddingTop(),
                 recyclerView.getPaddingRight(), 0);
+        refreshInfoBar();
+    }
+
+    private void refreshInfoBar() {
+        int limit = UserPreferences.getEpisodeCacheSize();
+        if (limit == UserPreferences.EPISODE_CACHE_SIZE_UNLIMITED) {
+            infoBar.setVisibility(View.GONE);
+            return;
+        }
+        infoBar.setText(getString(R.string.downloads_episode_limit_label, episodeCacheCount, limit));
+        if (adapter.inActionMode()) {
+            infoBar.setVisibility(View.INVISIBLE);
+        } else {
+            infoBar.setVisibility(View.VISIBLE);
+        }
     }
 
     private class CompletedDownloadsListAdapter extends EpisodeItemListAdapter {

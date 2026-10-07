@@ -428,6 +428,7 @@
     <string name="no_queue_items_inbox_has_items_label">No episodes lined up, but there are new episodes that await you!</string>
     <string name="no_queue_items_inbox_has_items_button_label">Go to inbox</string>
     <string name="no_shownotes_label">This episode has no shownotes.</string>
+    <string name="downloads_episode_limit_label">%1$d / %2$d episodes</string>
     <string name="no_comp_downloads_head_label">No downloaded episodes</string>
     <string name="no_comp_downloads_label">You can download episodes on the podcast details screen.</string>
     <string name="no_log_downloads_head_label">No download log</string>

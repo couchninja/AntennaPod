@@ -2,6 +2,7 @@
 <RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -17,6 +18,17 @@
             android:layout_height="?attr/actionBarSize"
             app:navigationContentDescription="@string/toolbar_back_button_content_description"
             app:navigationIcon="?homeAsUpIndicator" />
+
+        <TextView
+            android:id="@+id/info_bar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="-12dp"
+            android:layout_marginBottom="8dp"
+            android:paddingHorizontal="16dp"
+            android:textSize="12sp"
+            android:visibility="gone"
+            tools:text="15 / 20 episodes" />
 
     </com.google.android.material.appbar.AppBarLayout>
 
