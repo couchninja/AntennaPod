@@ -68,6 +68,7 @@ dependencies {
     playImplementation project(':net:sync:wear-interface')
     implementation project(':parser:feed')
     implementation project(':parser:transcript')
+    implementation project(':parser:podcastsegments')
     implementation project(':playback:base')
     implementation project(':playback:cast')
     implementation project(':storage:database')

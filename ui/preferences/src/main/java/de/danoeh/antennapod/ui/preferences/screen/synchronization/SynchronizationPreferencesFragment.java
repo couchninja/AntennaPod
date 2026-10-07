@@ -33,8 +33,11 @@ import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
 import de.danoeh.antennapod.event.SyncServiceEvent;
+import de.danoeh.antennapod.net.sync.service.PodcastSegmentsDownloadWorker;
 import de.danoeh.antennapod.storage.preferences.SynchronizationCredentials;
 import de.danoeh.antennapod.storage.preferences.SynchronizationSettings;
+import de.danoeh.antennapod.storage.preferences.UserPreferences;
+import androidx.preference.EditTextPreference;
 
 public class SynchronizationPreferencesFragment extends AnimatedPreferenceFragment {
     private static final String PREFERENCE_SYNCHRONIZATION_DESCRIPTION = "preference_synchronization_description";
@@ -83,6 +86,13 @@ public class SynchronizationPreferencesFragment extends AnimatedPreferenceFragme
 
     private void setupScreen() {
         final Activity activity = getActivity();
+        EditTextPreference segmentsUrlPreference = findPreference(UserPreferences.PREF_PODCAST_SEGMENTS_URL);
+        if (segmentsUrlPreference != null) {
+            segmentsUrlPreference.setOnPreferenceChangeListener((preference, newValue) -> {
+                PodcastSegmentsDownloadWorker.enqueueImmediately(activity.getApplicationContext());
+                return true;
+            });
+        }
         findPreference(PREFERENCE_GPODNET_SETLOGIN_INFORMATION)
                 .setOnPreferenceClickListener(preference -> {
                     AuthenticationDialog dialog = new AuthenticationDialog(activity,

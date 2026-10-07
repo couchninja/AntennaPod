@@ -50,6 +50,8 @@ import de.danoeh.antennapod.playback.cast.CastPlayerWrapper;
 import de.danoeh.antennapod.playback.service.internal.ExoPlayerUtils;
 import de.danoeh.antennapod.playback.service.internal.MediaLibrarySessionCallback;
 import de.danoeh.antennapod.playback.service.internal.PlayableUtils;
+import de.danoeh.antennapod.parser.podcastsegments.PodcastSegmentsRepository;
+import de.danoeh.antennapod.playback.service.internal.PodcastSegmentPlayback;
 import de.danoeh.antennapod.playback.service.internal.SkipUtils;
 import de.danoeh.antennapod.playback.service.internal.SleepTimer;
 import de.danoeh.antennapod.playback.service.internal.ClockSleepTimer;
@@ -102,6 +104,7 @@ public class Media3PlaybackService extends MediaLibraryService {
     @Override
     public void onCreate() {
         super.onCreate();
+        PodcastSegmentsRepository.init(this);
         EventBus.getDefault().register(this);
         DefaultMediaNotificationProvider notificationProvider = new DefaultMediaNotificationProvider(this,
                 session -> R.id.notification_playing,
@@ -178,6 +181,9 @@ public class Media3PlaybackService extends MediaLibraryService {
             public void seekForward() {
                 long duration = getDuration();
                 long target = getCurrentPosition() + UserPreferences.getFastForwardSecs() * 1000L;
+                if (currentPlayable != null) {
+                    target = PodcastSegmentPlayback.adjustForwardSeekPosition(currentPlayable, target);
+                }
 
                 if (duration > 0 && target >= duration) {
                     handlePlaybackEnded();
@@ -448,6 +454,11 @@ public class Media3PlaybackService extends MediaLibraryService {
                                 }
                                 if (SkipUtils.skipEndingIfNecessary(this, currentPlayable, position, duration, speed)) {
                                     player.seekTo(player.getDuration());
+                                } else if (currentPlayable != null) {
+                                    PodcastSegmentPlayback.skipDuringContinuousPlayback(
+                                            currentPlayable, position, duration,
+                                            player::seekTo,
+                                            () -> startNextInQueue(currentPlayable, true, false));
                                 }
                             }
                         }, error -> Log.e(TAG, "Position observer error", error));

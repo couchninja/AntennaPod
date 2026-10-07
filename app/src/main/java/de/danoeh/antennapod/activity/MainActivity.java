@@ -47,6 +47,8 @@ import de.danoeh.antennapod.net.download.service.feed.FeedUpdateManagerImpl;
 import de.danoeh.antennapod.net.download.serviceinterface.DownloadServiceInterface;
 import de.danoeh.antennapod.net.download.serviceinterface.FeedUpdateManager;
 import de.danoeh.antennapod.net.common.NetworkUtils;
+import de.danoeh.antennapod.net.sync.service.PodcastSegmentsDownloadWorker;
+import de.danoeh.antennapod.parser.podcastsegments.PodcastSegmentsRepository;
 import de.danoeh.antennapod.net.sync.serviceinterface.SynchronizationQueue;
 import de.danoeh.antennapod.playback.cast.CastEnabledActivity;
 import de.danoeh.antennapod.playback.service.PlaybackController;
@@ -215,6 +217,8 @@ public class MainActivity extends CastEnabledActivity implements NavigationToolb
 
         FeedUpdateManager.getInstance().restartUpdateAlarm(this, false);
         SynchronizationQueue.getInstance().syncIfNotSyncedRecently();
+        PodcastSegmentsRepository.init(this);
+        PodcastSegmentsDownloadWorker.enqueueIfStale(this);
         AutomaticDatabaseExportWorker.enqueueIfNeeded(this, false);
         DatabaseMaintenanceWorker.enqueueIfNeeded(this);
 

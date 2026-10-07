@@ -108,8 +108,11 @@ import de.danoeh.antennapod.model.playback.MediaType;
 import de.danoeh.antennapod.model.playback.Playable;
 import de.danoeh.antennapod.playback.base.PlaybackServiceMediaPlayer;
 import de.danoeh.antennapod.playback.base.PlayerStatus;
+import de.danoeh.antennapod.parser.podcastsegments.PodcastSegmentSkipHelper;
+import de.danoeh.antennapod.parser.podcastsegments.PodcastSegmentsRepository;
 import de.danoeh.antennapod.playback.cast.CastPsmp;
 import de.danoeh.antennapod.playback.cast.CastStateListener;
+import de.danoeh.antennapod.playback.service.internal.PodcastSegmentPlayback;
 import de.danoeh.antennapod.storage.preferences.UserPreferences;
 import de.danoeh.antennapod.ui.appstartintent.MainActivityStarter;
 import de.danoeh.antennapod.ui.appstartintent.VideoPlayerActivityStarter;
@@ -242,6 +245,7 @@ public class PlaybackService extends MediaBrowserServiceCompat {
             throw new IllegalStateException("Media3PlaybackService should be used instead of PlaybackService");
         }
         isRunning = true;
+        PodcastSegmentsRepository.init(this);
 
         stateManager = new PlaybackServiceStateManager(this);
         notificationBuilder = new PlaybackServiceNotificationBuilder(this);
@@ -617,6 +621,7 @@ public class PlaybackService extends MediaBrowserServiceCompat {
                 toast.show();
             }
         }
+        skipAutoSegmentsIfNecessary();
     }
 
     @SuppressLint("LaunchActivityFromNotification")
@@ -736,7 +741,7 @@ public class PlaybackService extends MediaBrowserServiceCompat {
                 return false;
             case KeyEvent.KEYCODE_MEDIA_FAST_FORWARD:
                 if (getStatus() == PlayerStatus.PLAYING || getStatus() == PlayerStatus.PAUSED) {
-                    mediaPlayer.seekDelta(UserPreferences.getFastForwardSecs() * 1000);
+                    seekDelta(UserPreferences.getFastForwardSecs() * 1000);
                     return true;
                 }
                 return false;
@@ -751,7 +756,7 @@ public class PlaybackService extends MediaBrowserServiceCompat {
                 return false;
             case KeyEvent.KEYCODE_MEDIA_REWIND:
                 if (getStatus() == PlayerStatus.PLAYING || getStatus() == PlayerStatus.PAUSED) {
-                    mediaPlayer.seekDelta(-UserPreferences.getRewindSecs() * 1000);
+                    seekDelta(-UserPreferences.getRewindSecs() * 1000);
                     return true;
                 }
                 return false;
@@ -1295,6 +1300,25 @@ public class PlaybackService extends MediaBrowserServiceCompat {
         }
     }
 
+    private void skipAutoSegmentsIfNecessary() {
+        Playable playable = mediaPlayer.getPlayable();
+        if (!(playable instanceof FeedMedia)) {
+            return;
+        }
+        FeedMedia feedMedia = (FeedMedia) playable;
+        int position = getCurrentPosition();
+        int duration = getDuration();
+        if (position == Playable.INVALID_TIME) {
+            return;
+        }
+        PodcastSegmentPlayback.skipDuringContinuousPlayback(feedMedia, position, duration,
+                target -> mediaPlayer.seekTo((int) target),
+                () -> {
+                    autoSkippedFeedMediaId = feedMedia.getItem().getIdentifyingValue();
+                    mediaPlayer.skip();
+                });
+    }
+
     /**
      * Updates the Media Session for the corresponding status.
      *
@@ -1790,7 +1814,27 @@ public class PlaybackService extends MediaBrowserServiceCompat {
     }
 
     private void seekDelta(final int d) {
-        mediaPlayer.seekDelta(d);
+        int currentPosition = getCurrentPosition();
+        if (currentPosition == Playable.INVALID_TIME) {
+            mediaPlayer.seekDelta(d);
+            return;
+        }
+        int newPosition = currentPosition + d;
+        if (d > 0) {
+            Playable playable = mediaPlayer.getPlayable();
+            if (playable instanceof FeedMedia) {
+                FeedMedia feedMedia = (FeedMedia) playable;
+                newPosition = (int) PodcastSegmentPlayback.adjustForwardSeekPosition(feedMedia, newPosition);
+                int duration = getDuration();
+                if (PodcastSegmentSkipHelper.shouldMarkPlayedAfterSkip(feedMedia, newPosition)
+                        || (duration > 0 && newPosition >= duration - 500)) {
+                    autoSkippedFeedMediaId = feedMedia.getItem().getIdentifyingValue();
+                    mediaPlayer.skip();
+                    return;
+                }
+            }
+        }
+        mediaPlayer.seekTo(newPosition);
     }
 
     /**
@@ -1863,6 +1907,7 @@ public class PlaybackService extends MediaBrowserServiceCompat {
                         }
                     }
                     skipEndingIfNecessary();
+                    skipAutoSegmentsIfNecessary();
                 });
     }
 

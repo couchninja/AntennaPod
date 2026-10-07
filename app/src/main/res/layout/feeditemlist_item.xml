@@ -129,6 +129,15 @@
                     app:tint="?attr/colorOnSurfaceVariant"
                     app:srcCompat="@drawable/ic_playlist_play" />
 
+                <ImageView
+                    android:id="@+id/ivHasSegments"
+                    android:layout_width="12sp"
+                    android:layout_height="12sp"
+                    android:contentDescription="@string/episode_has_segments_label"
+                    android:visibility="gone"
+                    app:tint="?attr/colorOnSurfaceVariant"
+                    app:srcCompat="@drawable/ic_tag" />
+
                 <TextView
                     android:id="@+id/separatorIcons"
                     android:layout_width="wrap_content"
