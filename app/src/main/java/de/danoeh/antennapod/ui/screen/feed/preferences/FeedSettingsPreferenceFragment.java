@@ -35,6 +35,7 @@ import de.danoeh.antennapod.model.feed.Feed;
 import de.danoeh.antennapod.model.feed.FeedFilter;
 import de.danoeh.antennapod.model.feed.FeedPreferences;
 import de.danoeh.antennapod.model.feed.VolumeAdaptionSetting;
+import de.danoeh.antennapod.net.download.serviceinterface.AutoDownloadManager;
 import de.danoeh.antennapod.net.download.serviceinterface.FeedUpdateManager;
 import de.danoeh.antennapod.storage.database.DBReader;
 import de.danoeh.antennapod.storage.database.DBWriter;
@@ -71,6 +72,7 @@ public class FeedSettingsPreferenceFragment extends PreferenceFragmentCompat {
     private static final String PREF_TAGS = "tags";
     private static final String PREF_EDIT_FEED_URL = "editFeedUrl";
     private static final String PREF_RECONNECT_LOCAL_FOLDER = "reconnectLocalFolder";
+    private static final String PREF_KEEP_DOWNLOAD = "keepDownloadEpisodes";
 
     private Feed feed;
     private Disposable disposable;
@@ -141,6 +143,7 @@ public class FeedSettingsPreferenceFragment extends PreferenceFragmentCompat {
                     updateAutoDeleteSummary();
                     updateAutoDownloadEnabledSummary();
                     updateNewEpisodesActionSummary();
+                    updateKeepDownloadSummary();
 
                     findPreference(PREF_RECONNECT_LOCAL_FOLDER).setVisible(feed.isLocalFeed());
                     if (feed.isLocalFeed()) {
@@ -148,6 +151,7 @@ public class FeedSettingsPreferenceFragment extends PreferenceFragmentCompat {
                         findPreference(PREF_AUTODOWNLOAD).setVisible(false);
                         findPreference(PREF_EPISODE_FILTER).setVisible(false);
                         findPreference(PREF_EDIT_FEED_URL).setVisible(false);
+                        findPreference(PREF_KEEP_DOWNLOAD).setVisible(false);
                     }
 
                     findPreference(PREF_SCREEN).setVisible(true);
@@ -260,6 +264,20 @@ public class FeedSettingsPreferenceFragment extends PreferenceFragmentCompat {
             updateNewEpisodesActionSummary();
             return false;
         });
+        findPreference(PREF_KEEP_DOWNLOAD).setOnPreferenceClickListener(preference -> {
+            new FeedKeepDownloadDialog(getContext(), feedPreferences.getKeepDownloadEpisodeCount(),
+                    feedPreferences.isKeepDownloadFromTop()) {
+                @Override
+                protected void onConfirmed(int episodeCount, boolean fromTop) {
+                    feedPreferences.setKeepDownloadEpisodeCount(episodeCount);
+                    feedPreferences.setKeepDownloadFromTop(fromTop);
+                    DBWriter.setFeedPreferences(feedPreferences);
+                    updateKeepDownloadSummary();
+                    AutoDownloadManager.getInstance().autodownloadUndownloadedItems(getContext());
+                }
+            }.show();
+            return false;
+        });
         findPreference(PREF_TAGS).setOnPreferenceClickListener(preference -> {
             TagSettingsDialog.newInstance(Collections.singletonList(feedPreferences))
                     .show(getChildFragmentManager(), TagSettingsDialog.TAG);
@@ -347,6 +365,25 @@ public class FeedSettingsPreferenceFragment extends PreferenceFragmentCompat {
             default -> getString(R.string.feed_new_episodes_action_nothing);
         };
         newEpisodesAction.setSummary(summary);
+    }
+
+    private void updateKeepDownloadSummary() {
+        if (feedPreferences == null) {
+            return;
+        }
+        Preference keepDownloadPreference = findPreference(PREF_KEEP_DOWNLOAD);
+        if (feedPreferences.getKeepDownloadEpisodeCount() == FeedPreferences.KEEP_DOWNLOAD_DISABLED) {
+            keepDownloadPreference.setSummary(R.string.pref_feed_keep_download_disabled);
+            return;
+        }
+        String direction = getString(feedPreferences.isKeepDownloadFromTop()
+                ? R.string.smart_queue_episode_direction_first
+                : R.string.smart_queue_episode_direction_last);
+        int count = feedPreferences.getKeepDownloadEpisodeCount();
+        String countLabel = count == FeedPreferences.KEEP_DOWNLOAD_ALL
+                ? getString(R.string.pref_feed_keep_download_all_episodes)
+                : getResources().getQuantityString(R.plurals.num_episodes, count, count);
+        keepDownloadPreference.setSummary(countLabel + " (" + direction + ")");
     }
 
     private void updateAutoDownloadEnabledSummary() {

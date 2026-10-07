@@ -13,6 +13,11 @@ import java.util.Set;
 public class FeedPreferences implements Serializable {
 
     public static final float SPEED_USE_GLOBAL = -1;
+    public static final int KEEP_DOWNLOAD_DISABLED = 0;
+    public static final int KEEP_DOWNLOAD_ALL = -1;
+    public static final int KEEP_DOWNLOAD_DEFAULT = 10;
+    public static final int[] KEEP_DOWNLOAD_EPISODE_COUNT_OPTIONS =
+            {1, 2, 3, 4, 5, 10, 20, 50, KEEP_DOWNLOAD_ALL};
     public static final String TAG_ROOT = "#root";
     public static final String TAG_UNTAGGED = "#untagged";
     public static final String TAG_SEPARATOR = "\u001e";
@@ -115,6 +120,8 @@ public class FeedPreferences implements Serializable {
     private int feedSkipEnding;
     private SkipSilence feedSkipSilence;
     private boolean showEpisodeNotification;
+    private int keepDownloadEpisodeCount;
+    private boolean keepDownloadFromTop;
     private final Set<String> tags = new HashSet<>();
 
     public FeedPreferences(long feedID, AutoDownloadSetting autoDownload, AutoDeleteAction autoDeleteAction,
@@ -122,7 +129,7 @@ public class FeedPreferences implements Serializable {
                            String username, String password) {
         this(feedID, autoDownload, true, autoDeleteAction, volumeAdaptionSetting, username, password,
                 new FeedFilter(), SPEED_USE_GLOBAL, 0, 0, SkipSilence.GLOBAL,
-                false, newEpisodesAction, new HashSet<>());
+                false, newEpisodesAction, new HashSet<>(), 0, false);
     }
 
     public FeedPreferences(long feedID, AutoDownloadSetting autoDownload, boolean keepUpdated,
@@ -130,7 +137,7 @@ public class FeedPreferences implements Serializable {
                             String username, String password, @NonNull FeedFilter filter,
                             float feedPlaybackSpeed, int feedSkipIntro, int feedSkipEnding, SkipSilence feedSkipSilence,
                             boolean showEpisodeNotification, NewEpisodesAction newEpisodesAction,
-                            Set<String> tags) {
+                            Set<String> tags, int keepDownloadEpisodeCount, boolean keepDownloadFromTop) {
         this.feedID = feedID;
         this.autoDownload = autoDownload;
         this.keepUpdated = keepUpdated;
@@ -146,6 +153,8 @@ public class FeedPreferences implements Serializable {
         this.showEpisodeNotification = showEpisodeNotification;
         this.newEpisodesAction = newEpisodesAction;
         this.tags.addAll(tags);
+        this.keepDownloadEpisodeCount = keepDownloadEpisodeCount;
+        this.keepDownloadFromTop = keepDownloadFromTop;
     }
 
     /**
@@ -313,5 +322,30 @@ public class FeedPreferences implements Serializable {
 
     public void setShowEpisodeNotification(boolean showEpisodeNotification) {
         this.showEpisodeNotification = showEpisodeNotification;
+    }
+
+    public int getKeepDownloadEpisodeCount() {
+        return keepDownloadEpisodeCount;
+    }
+
+    public void setKeepDownloadEpisodeCount(int keepDownloadEpisodeCount) {
+        this.keepDownloadEpisodeCount = keepDownloadEpisodeCount;
+    }
+
+    public boolean isKeepDownloadFromTop() {
+        return keepDownloadFromTop;
+    }
+
+    public void setKeepDownloadFromTop(boolean keepDownloadFromTop) {
+        this.keepDownloadFromTop = keepDownloadFromTop;
+    }
+
+    public static int getKeepDownloadOptionIndex(int episodeCount) {
+        for (int i = 0; i < KEEP_DOWNLOAD_EPISODE_COUNT_OPTIONS.length; i++) {
+            if (KEEP_DOWNLOAD_EPISODE_COUNT_OPTIONS[i] == episodeCount) {
+                return i;
+            }
+        }
+        return getKeepDownloadOptionIndex(KEEP_DOWNLOAD_DEFAULT);
     }
 }

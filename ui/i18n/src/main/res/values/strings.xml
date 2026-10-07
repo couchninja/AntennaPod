@@ -565,6 +565,10 @@
     <string name="pref_episode_cache_unlimited">Unlimited</string>
     <string name="pref_playback_speed_sum">Customize the speeds available for variable speed playback</string>
     <string name="pref_feed_playback_speed_sum">The speed to use when starting audio playback for episodes in this podcast</string>
+    <string name="pref_feed_keep_download_title">Keep episodes downloaded</string>
+    <string name="pref_feed_keep_download_summary">Automatically download episodes at the start or end of the podcast list (based on sorting)</string>
+    <string name="pref_feed_keep_download_disabled">Disabled</string>
+    <string name="pref_feed_keep_download_all_episodes">All episodes</string>
     <string name="pref_feed_skip">Auto skip</string>
     <string name="pref_feed_skip_sum">Skip introductions and ending credits</string>
     <string name="pref_feed_skip_ending">Skip last</string>

@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 import de.danoeh.antennapod.model.feed.FeedItem;
@@ -19,6 +20,7 @@ import de.danoeh.antennapod.model.feed.FeedMedia;
 import de.danoeh.antennapod.model.feed.SortOrder;
 import de.danoeh.antennapod.storage.database.DBReader;
 import de.danoeh.antennapod.storage.database.DBWriter;
+import de.danoeh.antennapod.storage.database.FeedKeepDownloadHelper;
 import de.danoeh.antennapod.storage.preferences.UserPreferences;
 
 /**
@@ -96,13 +98,15 @@ public class APCleanupAlgorithm extends EpisodeCleanupAlgorithm {
                 new FeedItemFilter(FeedItemFilter.DOWNLOADED), SortOrder.DATE_NEW_OLD);
 
         Date mostRecentDateForDeletion = calcMostRecentDateForDeletion(new Date());
+        Set<Long> keptFeedItemIds = FeedKeepDownloadHelper.getKeptFeedItemIds();
         for (FeedItem item : downloadedItems) {
             if (item.hasMedia()
                     && item.getMedia().isDownloaded()
                     && (!item.getFeed().isLocalFeed() || UserPreferences.isAutoDeleteLocal())
                     && !item.isTagged(FeedItem.TAG_QUEUE)
                     && item.isPlayed()
-                    && !item.isTagged(FeedItem.TAG_FAVORITE)) {
+                    && !item.isTagged(FeedItem.TAG_FAVORITE)
+                    && !keptFeedItemIds.contains(item.getId())) {
                 FeedMedia media = item.getMedia();
                 // make sure this candidate was played at least the proper amount of days prior
                 // to now

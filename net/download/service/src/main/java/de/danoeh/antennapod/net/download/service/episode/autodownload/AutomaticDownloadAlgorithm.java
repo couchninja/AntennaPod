@@ -17,6 +17,7 @@ import de.danoeh.antennapod.model.feed.FeedItemFilter;
 import de.danoeh.antennapod.model.feed.FeedPreferences;
 import de.danoeh.antennapod.net.download.serviceinterface.DownloadServiceInterface;
 import de.danoeh.antennapod.storage.database.DBReader;
+import de.danoeh.antennapod.storage.database.FeedKeepDownloadHelper;
 import de.danoeh.antennapod.storage.database.SmartQueueRefiller;
 import de.danoeh.antennapod.storage.preferences.UserPreferences;
 import de.danoeh.antennapod.net.common.NetworkUtils;
@@ -84,6 +85,13 @@ public class AutomaticDownloadAlgorithm {
             }
 
             for (FeedItem item : SmartQueueRefiller.getPredictiveDownloadCandidates()) {
+                if (!candidateIds.contains(item.getId())) {
+                    candidates.add(item);
+                    candidateIds.add(item.getId());
+                }
+            }
+
+            for (FeedItem item : FeedKeepDownloadHelper.getUndownloadedKeepCandidates()) {
                 if (!candidateIds.contains(item.getId())) {
                     candidates.add(item);
                     candidateIds.add(item.getId());

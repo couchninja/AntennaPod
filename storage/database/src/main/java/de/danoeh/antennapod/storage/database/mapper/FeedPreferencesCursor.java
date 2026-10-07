@@ -33,6 +33,8 @@ public class FeedPreferencesCursor extends CursorWrapper {
     private final int indexEpisodeNotification;
     private final int indexNewEpisodesAction;
     private final int indexTags;
+    private final int indexKeepDownloadEpisodeCount;
+    private final int indexKeepDownloadFromTop;
 
     public FeedPreferencesCursor(Cursor cursor) {
         super(cursor);
@@ -53,6 +55,8 @@ public class FeedPreferencesCursor extends CursorWrapper {
         indexEpisodeNotification = cursor.getColumnIndexOrThrow(PodDBAdapter.KEY_EPISODE_NOTIFICATION);
         indexNewEpisodesAction = cursor.getColumnIndexOrThrow(PodDBAdapter.KEY_NEW_EPISODES_ACTION);
         indexTags = cursor.getColumnIndexOrThrow(PodDBAdapter.KEY_FEED_TAGS);
+        indexKeepDownloadEpisodeCount = cursor.getColumnIndexOrThrow(PodDBAdapter.KEY_KEEP_DOWNLOAD_EPISODE_COUNT);
+        indexKeepDownloadFromTop = cursor.getColumnIndexOrThrow(PodDBAdapter.KEY_KEEP_DOWNLOAD_FROM_TOP);
     }
 
     /**
@@ -80,6 +84,8 @@ public class FeedPreferencesCursor extends CursorWrapper {
                 FeedPreferences.SkipSilence.fromCode(getInt(indexFeedSkipSilence)),
                 getInt(indexEpisodeNotification) > 0,
                 FeedPreferences.NewEpisodesAction.fromCode(getInt(indexNewEpisodesAction)),
-                new HashSet<>(Arrays.asList(tagsString.split(FeedPreferences.TAG_SEPARATOR))));
+                new HashSet<>(Arrays.asList(tagsString.split(FeedPreferences.TAG_SEPARATOR))),
+                getInt(indexKeepDownloadEpisodeCount),
+                getInt(indexKeepDownloadFromTop) > 0);
     }
 }
