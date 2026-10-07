@@ -39,6 +39,14 @@
         android:clipToPadding="false"
         android:paddingBottom="88dp" />
 
+    <include
+        android:id="@+id/emptyView"
+        layout="@layout/empty_view_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/appbar"
+        android:visibility="gone" />
+
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/addPodcastButton"
         android:layout_width="56dp"

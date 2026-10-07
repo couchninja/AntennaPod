@@ -40,6 +40,7 @@ import de.danoeh.antennapod.model.feed.SmartQueueRule;
 import de.danoeh.antennapod.storage.database.DBReader;
 import de.danoeh.antennapod.storage.preferences.UserPreferences;
 import de.danoeh.antennapod.ui.common.ThemeUtils;
+import de.danoeh.antennapod.ui.screen.drawer.NavigationNames;
 import it.xabaras.android.recyclerview.swipedecorator.RecyclerViewSwipeDecorator;
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
 import io.reactivex.rxjava3.disposables.Disposable;
@@ -56,7 +57,12 @@ public class SmartQueueFragment extends Fragment {
     private ItemTouchHelper itemTouchHelper;
     private RecyclerView recyclerView;
     private FloatingActionButton addButton;
+    private View emptyView;
+    private TextView emptyViewTitle;
+    private TextView emptyViewMessage;
+    private ImageView emptyViewIcon;
     private boolean smartQueueEnabled;
+    private boolean hasSubscribedFeeds;
 
     @Nullable
     @Override
@@ -114,6 +120,7 @@ public class SmartQueueFragment extends Fragment {
                 entries.remove(pos);
                 adapter.notifyItemRemoved(pos);
                 persistRules();
+                updateUiState();
             }
 
             @Override
@@ -146,23 +153,79 @@ public class SmartQueueFragment extends Fragment {
 
         addButton = root.findViewById(R.id.addPodcastButton);
         addButton.setOnClickListener(v -> showFeedPicker());
+
+        emptyView = root.findViewById(R.id.emptyView);
+        emptyViewTitle = emptyView.findViewById(de.danoeh.antennapod.ui.common.R.id.emptyViewTitle);
+        emptyViewMessage = emptyView.findViewById(de.danoeh.antennapod.ui.common.R.id.emptyViewMessage);
+        emptyViewIcon = emptyView.findViewById(de.danoeh.antennapod.ui.common.R.id.emptyViewIcon);
+
         updateEnabledState(UserPreferences.isSmartQueueEnabled());
-        loadEntries();
         return root;
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        loadEntries();
     }
 
     private void updateEnabledState(boolean enabled) {
         smartQueueEnabled = enabled;
-        if (recyclerView != null) {
-            recyclerView.setAlpha(enabled ? 1f : DISABLED_ALPHA);
-        }
-        if (addButton != null) {
-            addButton.setEnabled(enabled);
-            addButton.setAlpha(enabled ? 1f : DISABLED_ALPHA);
-        }
         if (adapter != null) {
             adapter.notifyDataSetChanged();
         }
+        updateUiState();
+    }
+
+    private void updateUiState() {
+        if (recyclerView == null || emptyView == null) {
+            return;
+        }
+        boolean showNoSubscriptions = !hasSubscribedFeeds;
+        boolean showEmptySmartQueue = hasSubscribedFeeds && entries.isEmpty();
+        boolean showSmartQueueOff = hasSubscribedFeeds && !smartQueueEnabled && !entries.isEmpty();
+        if (showNoSubscriptions) {
+            emptyView.setVisibility(View.VISIBLE);
+            emptyViewTitle.setText(R.string.no_subscriptions_head_label);
+            emptyViewMessage.setText(R.string.smart_queue_no_subscriptions_label);
+            emptyViewMessage.setVisibility(View.VISIBLE);
+            emptyViewIcon.setImageResource(R.drawable.ic_subscriptions);
+            emptyViewIcon.setVisibility(View.VISIBLE);
+            recyclerView.setVisibility(View.INVISIBLE);
+        } else if (showEmptySmartQueue) {
+            emptyView.setVisibility(View.VISIBLE);
+            setSmartQueueEmptyIcon();
+            emptyViewMessage.setVisibility(View.VISIBLE);
+            if (smartQueueEnabled) {
+                emptyViewTitle.setText(R.string.smart_queue_empty_head_label);
+                emptyViewMessage.setText(R.string.smart_queue_empty_on_label);
+            } else {
+                emptyViewTitle.setText(R.string.smart_queue_off_label);
+                emptyViewMessage.setText(R.string.smart_queue_empty_off_label);
+            }
+            recyclerView.setVisibility(View.INVISIBLE);
+        } else if (showSmartQueueOff) {
+            emptyView.setVisibility(View.VISIBLE);
+            emptyViewTitle.setText(R.string.smart_queue_off_label);
+            emptyViewMessage.setVisibility(View.GONE);
+            setSmartQueueEmptyIcon();
+            recyclerView.setVisibility(View.VISIBLE);
+            recyclerView.setAlpha(DISABLED_ALPHA);
+        } else {
+            emptyView.setVisibility(View.GONE);
+            recyclerView.setVisibility(View.VISIBLE);
+            recyclerView.setAlpha(smartQueueEnabled ? 1f : DISABLED_ALPHA);
+        }
+        if (addButton != null) {
+            boolean addEnabled = hasSubscribedFeeds && smartQueueEnabled;
+            addButton.setEnabled(addEnabled);
+            addButton.setAlpha(addEnabled ? 1f : DISABLED_ALPHA);
+        }
+    }
+
+    private void setSmartQueueEmptyIcon() {
+        emptyViewIcon.setImageResource(NavigationNames.getDrawable(TAG));
+        emptyViewIcon.setVisibility(View.VISIBLE);
     }
 
     @Override
@@ -180,21 +243,27 @@ public class SmartQueueFragment extends Fragment {
         disposable = io.reactivex.rxjava3.core.Single.fromCallable(() -> {
             List<SmartQueueRule> rules = UserPreferences.getSmartQueueRules();
             Map<Long, Feed> feedById = new ArrayMap<>();
+            boolean subscribedFeeds = false;
             for (Feed feed : DBReader.getFeedList()) {
                 feedById.put(feed.getId(), feed);
+                if (feed.getState() == Feed.STATE_SUBSCRIBED) {
+                    subscribedFeeds = true;
+                }
             }
             List<SmartQueueRuleEntry> loaded = new ArrayList<>();
             for (SmartQueueRule rule : rules) {
                 loaded.add(new SmartQueueRuleEntry(rule, feedById.get(rule.getFeedId())));
             }
-            return loaded;
+            return new LoadResult(loaded, subscribedFeeds);
         })
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(loaded -> {
+                .subscribe(result -> {
                     entries.clear();
-                    entries.addAll(loaded);
+                    entries.addAll(result.entries);
+                    hasSubscribedFeeds = result.hasSubscribedFeeds;
                     adapter.notifyDataSetChanged();
+                    updateUiState();
                 }, Throwable::printStackTrace);
     }
 
@@ -273,9 +342,20 @@ public class SmartQueueFragment extends Fragment {
                                         new SmartQueueRule(feed.getId(), false, 1), feed));
                                 adapter.notifyItemInserted(entries.size() - 1);
                                 persistRules();
+                                updateUiState();
                             })
                             .show();
                 }, Throwable::printStackTrace);
+    }
+
+    private static final class LoadResult {
+        final List<SmartQueueRuleEntry> entries;
+        final boolean hasSubscribedFeeds;
+
+        LoadResult(List<SmartQueueRuleEntry> entries, boolean hasSubscribedFeeds) {
+            this.entries = entries;
+            this.hasSubscribedFeeds = hasSubscribedFeeds;
+        }
     }
 
     private static final class SmartQueueRuleEntry {
@@ -410,6 +490,7 @@ public class SmartQueueFragment extends Fragment {
                 entries.remove(position);
                 adapter.notifyItemRemoved(position);
                 persistRules();
+                updateUiState();
             }
 
             void bind(SmartQueueRuleEntry entry, int position) {

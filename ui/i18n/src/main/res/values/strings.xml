@@ -431,6 +431,11 @@
     <string name="smart_queue_pick_podcast">Choose podcast</string>
     <string name="smart_queue_episode_direction_first">First</string>
     <string name="smart_queue_episode_direction_last">Last</string>
+    <string name="smart_queue_off_label">Smart Queue is off</string>
+    <string name="smart_queue_no_subscriptions_label">To subscribe to a podcast, go to Subscriptions.</string>
+    <string name="smart_queue_empty_head_label">No podcasts in smart queue</string>
+    <string name="smart_queue_empty_on_label">Press the plus icon below to add podcasts.</string>
+    <string name="smart_queue_empty_off_label">Turn on Smart Queue and add podcasts.</string>
     <string name="rebuild_smart_queue_label">Rebuild smart queue</string>
     <string name="rebuild_smart_queue_confirmation_msg">Please confirm that you want to clear the queue and fill it again using your smart queue rules.</string>
     <string name="queue_time_left_label">%1$s • %2$s left</string>
