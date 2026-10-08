@@ -114,6 +114,8 @@ public abstract class UserPreferences {
     private static final String PREF_GPODNET_NOTIFICATIONS = "pref_gpodnet_notifications";
     public static final String PREF_PODCAST_SEGMENTS_URL = "prefPodcastSegmentsUrl";
     private static final String PREF_PODCAST_SEGMENTS_LAST_DOWNLOAD = "prefPodcastSegmentsLastDownload";
+    private static final String PREF_PODCAST_SEGMENTS_VALIDATOR_URL = "prefPodcastSegmentsValidatorUrl";
+    private static final String PREF_PODCAST_SEGMENTS_VALIDATOR = "prefPodcastSegmentsValidator";
 
     // Other
     private static final String PREF_DATA_FOLDER = "prefDataFolder";
@@ -926,5 +928,27 @@ public abstract class UserPreferences {
 
     public static long getPodcastSegmentsLastDownload() {
         return prefs.getLong(PREF_PODCAST_SEGMENTS_LAST_DOWNLOAD, 0);
+    }
+
+    /**
+     * ETag or Last-Modified from the last successful download for conditional GET.
+     * Scoped to {@code url} because validators identify a specific resource; reusing one after
+     * the user changes the settings URL would skip downloads incorrectly or send wrong headers.
+     */
+    public static String getPodcastSegmentsValidator(String url) {
+        if (url == null || url.trim().isEmpty()) {
+            return "";
+        }
+        if (!url.trim().equals(prefs.getString(PREF_PODCAST_SEGMENTS_VALIDATOR_URL, ""))) {
+            return "";
+        }
+        return prefs.getString(PREF_PODCAST_SEGMENTS_VALIDATOR, "");
+    }
+
+    public static void setPodcastSegmentsValidator(String url, String validator) {
+        prefs.edit()
+                .putString(PREF_PODCAST_SEGMENTS_VALIDATOR_URL, url == null ? "" : url.trim())
+                .putString(PREF_PODCAST_SEGMENTS_VALIDATOR, validator == null ? "" : validator)
+                .apply();
     }
 }

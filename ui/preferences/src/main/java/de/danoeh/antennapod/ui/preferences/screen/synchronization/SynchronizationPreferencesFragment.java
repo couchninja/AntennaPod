@@ -89,6 +89,8 @@ public class SynchronizationPreferencesFragment extends AnimatedPreferenceFragme
         EditTextPreference segmentsUrlPreference = findPreference(UserPreferences.PREF_PODCAST_SEGMENTS_URL);
         if (segmentsUrlPreference != null) {
             segmentsUrlPreference.setOnPreferenceChangeListener((preference, newValue) -> {
+                // Validator is tied to the old URL; clear so the next download is unconditional.
+                UserPreferences.setPodcastSegmentsValidator(String.valueOf(newValue), "");
                 PodcastSegmentsDownloadWorker.enqueueImmediately(activity.getApplicationContext());
                 return true;
             });
