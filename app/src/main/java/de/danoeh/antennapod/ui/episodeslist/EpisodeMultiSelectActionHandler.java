@@ -119,6 +119,7 @@ public class EpisodeMultiSelectActionHandler {
             }
         }
         DBWriter.markItemsPlayed(FeedItem.PLAYED, true, items);
+        DBWriter.removeQueueItem(activity, true, getSelectedIds(items));
         showMessage(R.plurals.marked_as_played_message, items.size());
     }
 

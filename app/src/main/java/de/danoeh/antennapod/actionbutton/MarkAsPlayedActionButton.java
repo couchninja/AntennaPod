@@ -37,6 +37,7 @@ public class MarkAsPlayedActionButton extends ItemActionButton {
                 FeedItemMenuHandler.stopPlaybackIfCurrentlyPlaying(context, item.getMedia());
             }
             DBWriter.markItemsPlayed(FeedItem.PLAYED, true, Collections.singletonList(item));
+            DBWriter.removeQueueItem(context, true, item.getId());
         }
     }
 
