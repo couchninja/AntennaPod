@@ -420,7 +420,8 @@ public class SubscriptionFragment extends Fragment
                         }
                         feeds = openedFolderFeeds;
                         progressBar.setVisibility(View.GONE);
-                        subscriptionAdapter.setItems(feeds, result.first.feedCounters);
+                        subscriptionAdapter.setItems(feeds, result.first.feedCounters,
+                                result.first.unplayedFeedCounters);
                         if (firstLoaded) {
                             restoreScrollPosition(scrollPosition);
                         }

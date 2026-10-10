@@ -13,19 +13,22 @@ public class NavDrawerData {
     public final int numNewItems;
     public final int numDownloadedItems;
     public final Map<Long, Integer> feedCounters;
+    public final Map<Long, Integer> unplayedFeedCounters;
 
     public NavDrawerData(List<Feed> feeds,
                          List<TagItem> tags,
                          int queueSize,
                          int numNewItems,
                          int numDownloadedItems,
-                         Map<Long, Integer> feedIndicatorValues) {
+                         Map<Long, Integer> feedIndicatorValues,
+                         Map<Long, Integer> unplayedFeedCounters) {
         this.feeds = feeds;
         this.tags = tags;
         this.queueSize = queueSize;
         this.numNewItems = numNewItems;
         this.numDownloadedItems = numDownloadedItems;
         this.feedCounters = feedIndicatorValues;
+        this.unplayedFeedCounters = unplayedFeedCounters;
     }
 
     public static class TagItem {
