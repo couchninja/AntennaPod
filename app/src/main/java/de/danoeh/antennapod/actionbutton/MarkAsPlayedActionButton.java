@@ -8,6 +8,7 @@ import android.view.View;
 import de.danoeh.antennapod.R;
 import de.danoeh.antennapod.model.feed.FeedItem;
 import de.danoeh.antennapod.storage.database.DBWriter;
+import de.danoeh.antennapod.ui.episodeslist.FeedItemMenuHandler;
 
 import java.util.Collections;
 
@@ -32,6 +33,9 @@ public class MarkAsPlayedActionButton extends ItemActionButton {
     @Override
     public void onClick(Context context) {
         if (!item.isPlayed()) {
+            if (item.hasMedia()) {
+                FeedItemMenuHandler.stopPlaybackIfCurrentlyPlaying(context, item.getMedia());
+            }
             DBWriter.markItemsPlayed(FeedItem.PLAYED, true, Collections.singletonList(item));
         }
     }

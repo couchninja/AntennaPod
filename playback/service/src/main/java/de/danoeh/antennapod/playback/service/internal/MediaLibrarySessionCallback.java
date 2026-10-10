@@ -353,6 +353,10 @@ public class MediaLibrarySessionCallback implements MediaLibraryService.MediaLib
         return future;
     }
 
+    private static boolean canResumePlayback(@Nullable FeedMedia media) {
+        return media != null && media.getItem() != null && !media.getItem().isPlayed();
+    }
+
     @UnstableApi
     @Override
     @NonNull
@@ -362,19 +366,27 @@ public class MediaLibrarySessionCallback implements MediaLibraryService.MediaLib
         SettableFuture<MediaSession.MediaItemsWithStartPosition> future = SettableFuture.create();
         Single.fromCallable(() -> {
             FeedMedia media = DBReader.getFeedMedia(PlaybackPreferences.getCurrentlyPlayingFeedMediaId());
-            // If there is no media to resume, media3 crashes. So instead of crashing, just play something random.
+            if (!canResumePlayback(media)) {
+                media = null;
+            }
             if (media == null) {
                 Log.d(TAG, "onPlaybackResumption: trying paused queue now");
-                List<FeedItem> recentQueue = DBReader.getPausedQueue(1);
-                if (!recentQueue.isEmpty()) {
-                    media = recentQueue.get(0).getMedia();
+                List<FeedItem> recentQueue = DBReader.getPausedQueue(5);
+                for (FeedItem item : recentQueue) {
+                    if (canResumePlayback(item.getMedia())) {
+                        media = item.getMedia();
+                        break;
+                    }
                 }
             }
             if (media == null) {
                 Log.d(TAG, "onPlaybackResumption: trying recent episodes now");
-                List<FeedItem> items = DBReader.getEpisodes(0, 1, FeedItemFilter.unfiltered(), SortOrder.DATE_NEW_OLD);
-                if (!items.isEmpty()) {
-                    media = items.get(0).getMedia();
+                List<FeedItem> items = DBReader.getEpisodes(0, 5, FeedItemFilter.unfiltered(), SortOrder.DATE_NEW_OLD);
+                for (FeedItem item : items) {
+                    if (canResumePlayback(item.getMedia())) {
+                        media = item.getMedia();
+                        break;
+                    }
                 }
             }
             return media;
@@ -382,6 +394,11 @@ public class MediaLibrarySessionCallback implements MediaLibraryService.MediaLib
                 .subscribeOn(Schedulers.io())
                 .subscribe(
                         media -> {
+                            if (!canResumePlayback(media)) {
+                                future.set(new MediaSession.MediaItemsWithStartPosition(
+                                        Collections.emptyList(), 0, 0));
+                                return;
+                            }
                             long startPosition = SkipUtils.skipIntroIfNecessary(context, media);
                             startPosition = RewindAfterPauseUtils.calculatePositionWithRewind(
                                     (int) startPosition, media.getLastPlayedTimeStatistics());

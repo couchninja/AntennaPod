@@ -1093,6 +1093,7 @@ public class PodDBAdapter {
                 + " INNER JOIN " + TABLE_NAME_FEED_ITEMS
                 + " ON " + SELECT_KEY_ITEM_ID + " = " + TABLE_NAME_QUEUE + "." + KEY_FEEDITEM
                 +  JOIN_FEED_ITEM_AND_MEDIA
+                + " WHERE " + TABLE_NAME_FEED_ITEMS + "." + KEY_READ + " != " + FeedItem.PLAYED
                 + " ORDER BY (CASE WHEN " + hasPositionOrRecentlyPlayed + " THEN "
                     + TABLE_NAME_FEED_MEDIA + "." + KEY_LAST_PLAYED_TIME_STATISTICS + " ELSE 0 END) DESC , "
                 + TABLE_NAME_QUEUE + "." + KEY_ID

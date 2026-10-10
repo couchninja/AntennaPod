@@ -852,18 +852,34 @@ public class Media3PlaybackService extends MediaLibraryService {
     @Subscribe(threadMode = ThreadMode.MAIN)
     @SuppressWarnings("unused")
     public void feedItemsUpdated(FeedItemEvent event) {
-        if (currentPlayable == null || !currentPlayable.localFileAvailable()) {
+        if (currentPlayable == null) {
             return;
         }
         int index = FeedItemEvent.indexOfItemWithId(event.items, currentPlayable.getItemId());
-        if (index >= 0 && event.items.get(index).getMedia() != null
-                && !event.items.get(index).getMedia().localFileAvailable()) {
+        if (index < 0) {
+            return;
+        }
+        FeedItem updatedItem = event.items.get(index);
+        if (updatedItem.isPlayed()) {
+            stopPlaybackAndClearSession();
+            return;
+        }
+        if (updatedItem.getMedia() != null && !updatedItem.getMedia().localFileAvailable()) {
+            stopPlaybackAndClearSession();
+        }
+    }
+
+    private void stopPlaybackAndClearSession() {
+        cancelPositionObserver();
+        currentPlayable = null;
+        if (player != null) {
             player.stop();
             player.clearMediaItems();
-            currentPlayable = null;
-            PlaybackPreferences.writeNoMediaPlaying();
-            EventBus.getDefault().post(new PlayerStatusEvent());
         }
+        PlaybackPreferences.writeNoMediaPlaying();
+        EventBus.getDefault().post(new PlayerStatusEvent());
+        EventBus.getDefault().post(
+                new PlaybackServiceEvent(PlaybackServiceEvent.Action.SERVICE_SHUT_DOWN));
     }
 
     private void initLoudnessEnhancer(int audioSessionId) {

@@ -16,8 +16,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import de.danoeh.antennapod.BuildConfig;
 import de.danoeh.antennapod.R;
 import de.danoeh.antennapod.event.MessageEvent;
+import de.danoeh.antennapod.event.PlayerStatusEvent;
+import de.danoeh.antennapod.event.playback.PlaybackServiceEvent;
 import de.danoeh.antennapod.model.feed.Feed;
 import de.danoeh.antennapod.net.download.serviceinterface.DownloadServiceInterface;
 import de.danoeh.antennapod.storage.preferences.PlaybackPreferences;
@@ -173,6 +176,26 @@ public class FeedItemMenuHandler {
         }
     }
 
+    public static void stopPlaybackIfCurrentlyPlaying(Context context, FeedMedia media) {
+        if (media == null) {
+            return;
+        }
+        if (media.getId() != PlaybackPreferences.getCurrentlyPlayingFeedMediaId()) {
+            return;
+        }
+        if (BuildConfig.USE_MEDIA3_PLAYBACK_SERVICE) {
+            PlaybackController.bindToMedia3Service(context, controller -> {
+                controller.clearMediaItems();
+                controller.stop();
+            });
+        } else {
+            context.sendBroadcast(MediaButtonStarter.createIntent(context, KeyEvent.KEYCODE_MEDIA_STOP));
+        }
+        PlaybackPreferences.writeNoMediaPlaying();
+        EventBus.getDefault().post(new PlayerStatusEvent());
+        EventBus.getDefault().post(new PlaybackServiceEvent(PlaybackServiceEvent.Action.SERVICE_SHUT_DOWN));
+    }
+
     /**
      * Default menu handling for the given FeedItem.
      * A Fragment instance, (rather than the more generic Context), is needed as a parameter
@@ -205,13 +228,7 @@ public class FeedItemMenuHandler {
             DBWriter.removeFavoriteItems(Collections.singletonList(selectedItem));
         } else if (menuItemId == R.id.reset_position) {
             selectedItem.getMedia().setPosition(0);
-            if (PlaybackPreferences.getCurrentlyPlayingFeedMediaId() == selectedItem.getMedia().getId()) {
-                PlaybackPreferences.writeNoMediaPlaying();
-                PlaybackController.bindToMedia3Service(context, controller -> {
-                    controller.clearMediaItems();
-                    controller.stop();
-                });
-            }
+            stopPlaybackIfCurrentlyPlaying(context, selectedItem.getMedia());
             DBWriter.markItemsPlayed(FeedItem.UNPLAYED, true, Collections.singletonList(selectedItem));
         } else if (menuItemId == R.id.visit_website_item) {
             IntentUtils.openInBrowser(context, selectedItem.getLinkWithFallback());
