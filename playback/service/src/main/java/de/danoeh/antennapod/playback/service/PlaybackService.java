@@ -113,6 +113,7 @@ import de.danoeh.antennapod.parser.podcastsegments.PodcastSegmentsRepository;
 import de.danoeh.antennapod.playback.cast.CastPsmp;
 import de.danoeh.antennapod.playback.cast.CastStateListener;
 import de.danoeh.antennapod.playback.service.internal.PodcastSegmentPlayback;
+import de.danoeh.antennapod.playback.service.internal.PodcastSegmentSkipState;
 import de.danoeh.antennapod.storage.preferences.UserPreferences;
 import de.danoeh.antennapod.ui.appstartintent.MainActivityStarter;
 import de.danoeh.antennapod.ui.appstartintent.VideoPlayerActivityStarter;
@@ -171,6 +172,7 @@ public class PlaybackService extends MediaBrowserServiceCompat {
     private SleepTimer sleepTimer;
     private PlaybackServiceStateManager stateManager;
     private Disposable positionEventTimer;
+    private final PodcastSegmentSkipState segmentSkipState = new PodcastSegmentSkipState();
     private PlaybackServiceNotificationBuilder notificationBuilder;
     private CastStateListener castStateListener;
     private final CompositeDisposable singleShotDisposables = new CompositeDisposable();
@@ -613,7 +615,9 @@ public class PlaybackService extends MediaBrowserServiceCompat {
             int duration = getDuration();
             if (skipIntro * 1000 < duration || duration <= 0) {
                 Log.d(TAG, "skipIntro " + playable.getEpisodeTitle());
-                mediaPlayer.seekTo(skipIntro * 1000);
+                int introPositionMs = skipIntro * 1000;
+                mediaPlayer.seekTo(introPositionMs);
+                segmentSkipState.onAutomaticPositionSet(introPositionMs);
                 String skipIntroMesg = context.getResources().getQuantityString(
                         R.plurals.pref_feed_skip_intro_snackbar, skipIntro, skipIntro);
                 Toast toast = Toast.makeText(context, skipIntroMesg,
@@ -964,9 +968,13 @@ public class PlaybackService extends MediaBrowserServiceCompat {
 
         @Override
         public void onPlaybackStart(@NonNull Playable playable, int position) {
+            segmentSkipState.reset();
             taskManager.startWidgetUpdater();
             if (position != Playable.INVALID_TIME) {
                 playable.setPosition(position);
+                if (playable instanceof FeedMedia) {
+                    segmentSkipState.onAutomaticPositionSet(position);
+                }
             } else {
                 skipIntro(playable);
             }
@@ -1311,8 +1319,11 @@ public class PlaybackService extends MediaBrowserServiceCompat {
         if (position == Playable.INVALID_TIME) {
             return;
         }
-        PodcastSegmentPlayback.skipDuringContinuousPlayback(feedMedia, position, duration,
-                target -> mediaPlayer.seekTo((int) target),
+        PodcastSegmentPlayback.skipDuringContinuousPlayback(feedMedia, segmentSkipState, position, duration,
+                target -> {
+                    segmentSkipState.onAutomaticPositionSet(target);
+                    mediaPlayer.seekTo((int) target);
+                },
                 () -> {
                     autoSkippedFeedMediaId = feedMedia.getItem().getIdentifyingValue();
                     mediaPlayer.skip();
@@ -1809,6 +1820,10 @@ public class PlaybackService extends MediaBrowserServiceCompat {
     }
 
     public void seekTo(final int t) {
+        Playable playable = mediaPlayer.getPlayable();
+        if (playable instanceof FeedMedia) {
+            segmentSkipState.onUserSeek((FeedMedia) playable, t);
+        }
         mediaPlayer.seekTo(t);
         EventBus.getDefault().post(new PlaybackPositionEvent(t, getDuration()));
     }
@@ -1820,8 +1835,8 @@ public class PlaybackService extends MediaBrowserServiceCompat {
             return;
         }
         int newPosition = currentPosition + d;
+        Playable playable = mediaPlayer.getPlayable();
         if (d > 0) {
-            Playable playable = mediaPlayer.getPlayable();
             if (playable instanceof FeedMedia) {
                 FeedMedia feedMedia = (FeedMedia) playable;
                 newPosition = (int) PodcastSegmentPlayback.adjustForwardSeekPosition(feedMedia, newPosition);
@@ -1832,7 +1847,10 @@ public class PlaybackService extends MediaBrowserServiceCompat {
                     mediaPlayer.skip();
                     return;
                 }
+                segmentSkipState.onAutomaticPositionSet(newPosition);
             }
+        } else if (playable instanceof FeedMedia) {
+            segmentSkipState.onUserSeek((FeedMedia) playable, newPosition);
         }
         mediaPlayer.seekTo(newPosition);
     }

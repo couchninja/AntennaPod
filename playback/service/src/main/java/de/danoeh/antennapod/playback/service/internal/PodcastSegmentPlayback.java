@@ -20,10 +20,11 @@ public final class PodcastSegmentPlayback {
         return PodcastSegmentSkipHelper.applyForwardSkipMs(media, positionMs);
     }
 
-    public static void skipDuringContinuousPlayback(FeedMedia media, long positionMs, long durationMs,
-                                                      SeekListener seekListener, SkipToNextListener skipListener) {
-        long target = PodcastSegmentSkipHelper.applyContinuousSkipMs(media, positionMs);
-        if (target == positionMs) {
+    public static void skipDuringContinuousPlayback(FeedMedia media, PodcastSegmentSkipState state, long currentMs,
+                                                      long durationMs, SeekListener seekListener,
+                                                      SkipToNextListener skipListener) {
+        long target = state.computeSkipTargetMs(media, currentMs);
+        if (target == currentMs) {
             return;
         }
         if (PodcastSegmentSkipHelper.shouldMarkPlayedAfterSkip(media, target)

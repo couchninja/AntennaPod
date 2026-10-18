@@ -137,8 +137,51 @@ public class PodcastSegmentsRepository {
             }
             clamped.add(new PodcastSegment(segment.getType(), segment.getStartSec(), endSec, segment.getLabel()));
         }
-        return new EpisodeSegments(Math.min(episode.getMp3DurationSec(), durationSec), clamped,
-                episode.getEpisodeUrlAliases());
+        EpisodeSegments clampedEpisode = new EpisodeSegments(Math.min(episode.getMp3DurationSec(), durationSec),
+                clamped, episode.getEpisodeUrlAliases());
+        return mergeAutoSkipSegments(clampedEpisode, durationSec);
+    }
+
+    private static EpisodeSegments mergeAutoSkipSegments(EpisodeSegments episode, double durationSec) {
+        List<PodcastSegment> nonAutoSkip = new ArrayList<>();
+        List<PodcastSegment> autoSkip = new ArrayList<>();
+        for (PodcastSegment segment : episode.getSegments()) {
+            if (segment.isAutoSkipType()) {
+                autoSkip.add(segment);
+            } else {
+                nonAutoSkip.add(segment);
+            }
+        }
+        autoSkip.sort((a, b) -> Double.compare(a.getStartSec(), b.getStartSec()));
+        List<PodcastSegment> mergedAutoSkip = new ArrayList<>();
+        for (PodcastSegment segment : autoSkip) {
+            double endSec = segment.getEndSec();
+            if (endSec > durationSec) {
+                endSec = durationSec;
+            }
+            if (endSec <= segment.getStartSec()) {
+                continue;
+            }
+            if (mergedAutoSkip.isEmpty()) {
+                mergedAutoSkip.add(new PodcastSegment(segment.getType(), segment.getStartSec(), endSec,
+                        segment.getLabel()));
+                continue;
+            }
+            PodcastSegment last = mergedAutoSkip.get(mergedAutoSkip.size() - 1);
+            double gapSec = segment.getStartSec() - last.getEndSec();
+            if (gapSec <= 2.0) {
+                double mergedEnd = Math.max(last.getEndSec(), endSec);
+                mergedAutoSkip.set(mergedAutoSkip.size() - 1,
+                        new PodcastSegment(last.getType(), last.getStartSec(), mergedEnd, last.getLabel()));
+            } else {
+                mergedAutoSkip.add(new PodcastSegment(segment.getType(), segment.getStartSec(), endSec,
+                        segment.getLabel()));
+            }
+        }
+        List<PodcastSegment> merged = new ArrayList<>(nonAutoSkip);
+        merged.addAll(mergedAutoSkip);
+        merged.sort((a, b) -> Double.compare(a.getStartSec(), b.getStartSec()));
+        return new EpisodeSegments(episode.getMp3DurationSec(), merged, episode.getEpisodeUrlAliases());
     }
 
     public static boolean hasEpisodeSegments(FeedItem item) {
