@@ -27,4 +27,11 @@
         android:key="pref_synchronization_logout"
         android:title="@string/synchronization_logout"/>
 
+    <EditTextPreference
+        android:key="prefPodcastSegmentsUrl"
+        android:title="@string/pref_podcast_segments_url_title"
+        android:summary="@string/pref_podcast_segments_url_summary"
+        android:defaultValue="https://jankins.duckdns.org/s/H6Wy3mw8Yq4WfmE/download"
+        android:inputType="textUri"/>
+
 </PreferenceScreen>

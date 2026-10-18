@@ -19,6 +19,7 @@ dependencies {
     implementation project(':ui:notifications')
     implementation project(':ui:i18n')
     implementation project(':net:download:service-interface')
+    implementation project(':parser:podcastsegments')
 
     annotationProcessor libs.androidx.annotation
     implementation libs.androidx.core

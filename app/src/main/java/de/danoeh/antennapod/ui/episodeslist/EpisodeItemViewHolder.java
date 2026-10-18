@@ -31,6 +31,7 @@ import de.danoeh.antennapod.ui.common.Converter;
 import de.danoeh.antennapod.net.common.NetworkUtils;
 import de.danoeh.antennapod.model.playback.Playable;
 import de.danoeh.antennapod.ui.common.CircularProgressBar;
+import de.danoeh.antennapod.parser.podcastsegments.PodcastSegmentsRepository;
 import de.danoeh.antennapod.ui.episodes.ImageResourceUtils;
 
 /**
@@ -52,6 +53,7 @@ public class EpisodeItemViewHolder extends RecyclerView.ViewHolder {
     public final ImageView isInQueue;
     private final ImageView isVideo;
     public final ImageView isFavorite;
+    private final ImageView hasSegments;
     private final ProgressBar progressBar;
     public final View secondaryActionButton;
     public final ImageView secondaryActionIcon;
@@ -80,6 +82,7 @@ public class EpisodeItemViewHolder extends RecyclerView.ViewHolder {
         isVideo = itemView.findViewById(R.id.ivIsVideo);
         isInbox = itemView.findViewById(R.id.statusInbox);
         isFavorite = itemView.findViewById(R.id.isFavorite);
+        hasSegments = itemView.findViewById(R.id.ivHasSegments);
         size = itemView.findViewById(R.id.size);
         separatorIcons = itemView.findViewById(R.id.separatorIcons);
         secondaryActionProgress = itemView.findViewById(R.id.secondaryActionProgress);
@@ -104,6 +107,7 @@ public class EpisodeItemViewHolder extends RecyclerView.ViewHolder {
         isInbox.setVisibility(item.isNew() ? View.VISIBLE : View.GONE);
         isFavorite.setVisibility(item.isTagged(FeedItem.TAG_FAVORITE) ? View.VISIBLE : View.GONE);
         isInQueue.setVisibility(item.isTagged(FeedItem.TAG_QUEUE) ? View.VISIBLE : View.GONE);
+        hasSegments.setVisibility(PodcastSegmentsRepository.hasEpisodeSegments(item) ? View.VISIBLE : View.GONE);
         container.setAlpha(item.isPlayed() ? 0.5f : 1.0f);
 
         ItemActionButton actionButton = ItemActionButton.forItem(item);
@@ -202,6 +206,7 @@ public class EpisodeItemViewHolder extends RecyclerView.ViewHolder {
         isVideo.setVisibility(View.GONE);
         isFavorite.setVisibility(View.GONE);
         isInQueue.setVisibility(View.GONE);
+        hasSegments.setVisibility(View.GONE);
         title.setText("███████");
         pubDate.setText("████");
         duration.setText("████");
@@ -265,7 +270,7 @@ public class EpisodeItemViewHolder extends RecyclerView.ViewHolder {
                 || isInQueue.getVisibility() == View.VISIBLE
                 || isVideo.getVisibility() == View.VISIBLE
                 || isFavorite.getVisibility() == View.VISIBLE
-                || isInbox.getVisibility() == View.VISIBLE;
+                || hasSegments.getVisibility() == View.VISIBLE;
         separatorIcons.setVisibility(hasIcons ? View.VISIBLE : View.GONE);
     }
 }

@@ -19,6 +19,7 @@ import de.danoeh.antennapod.event.PlayerStatusEvent;
 import de.danoeh.antennapod.playback.service.PlaybackController;
 import de.danoeh.antennapod.storage.database.DBReader;
 import de.danoeh.antennapod.storage.preferences.PlaybackPreferences;
+import de.danoeh.antennapod.parser.podcastsegments.PodcastSegmentsFormatter;
 import de.danoeh.antennapod.ui.cleaner.ShownotesCleaner;
 import de.danoeh.antennapod.model.feed.FeedMedia;
 import de.danoeh.antennapod.model.playback.Playable;
@@ -108,15 +109,19 @@ public class ItemDescriptionFragment extends Fragment {
                 emitter.onComplete();
                 return;
             }
+            String description = media.getDescription();
             if (media instanceof FeedMedia) {
                 FeedMedia feedMedia = ((FeedMedia) media);
                 if (feedMedia.getItem() == null) {
                     feedMedia.setItem(DBReader.getFeedItem(feedMedia.getItemId()));
                 }
                 DBReader.loadDescriptionOfFeedItem(feedMedia.getItem());
+                if (feedMedia.getItem() != null) {
+                    description = PodcastSegmentsFormatter.appendToDescription(description, feedMedia.getItem());
+                }
             }
             ShownotesCleaner shownotesCleaner = new ShownotesCleaner(
-                    context, media.getDescription(), media.getDuration());
+                    context, description, media.getDuration());
             emitter.onSuccess(shownotesCleaner.processShownotes());
         })
                 .subscribeOn(Schedulers.computation())

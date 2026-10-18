@@ -50,6 +50,9 @@ import de.danoeh.antennapod.playback.cast.CastPlayerWrapper;
 import de.danoeh.antennapod.playback.service.internal.ExoPlayerUtils;
 import de.danoeh.antennapod.playback.service.internal.MediaLibrarySessionCallback;
 import de.danoeh.antennapod.playback.service.internal.PlayableUtils;
+import de.danoeh.antennapod.parser.podcastsegments.PodcastSegmentsRepository;
+import de.danoeh.antennapod.playback.service.internal.PodcastSegmentPlayback;
+import de.danoeh.antennapod.playback.service.internal.PodcastSegmentSkipState;
 import de.danoeh.antennapod.playback.service.internal.SkipUtils;
 import de.danoeh.antennapod.playback.service.internal.SleepTimer;
 import de.danoeh.antennapod.playback.service.internal.ClockSleepTimer;
@@ -93,6 +96,7 @@ public class Media3PlaybackService extends MediaLibraryService {
     private Disposable positionObserverDisposable;
     private Disposable queueLoaderDisposable;
     private long lastPositionSaveTime = 0;
+    private final PodcastSegmentSkipState segmentSkipState = new PodcastSegmentSkipState();
     private SleepTimer sleepTimer;
     @Nullable
     private LoudnessEnhancer loudnessEnhancer = null;
@@ -102,6 +106,7 @@ public class Media3PlaybackService extends MediaLibraryService {
     @Override
     public void onCreate() {
         super.onCreate();
+        PodcastSegmentsRepository.init(this);
         EventBus.getDefault().register(this);
         DefaultMediaNotificationProvider notificationProvider = new DefaultMediaNotificationProvider(this,
                 session -> R.id.notification_playing,
@@ -178,13 +183,19 @@ public class Media3PlaybackService extends MediaLibraryService {
             public void seekForward() {
                 long duration = getDuration();
                 long target = getCurrentPosition() + UserPreferences.getFastForwardSecs() * 1000L;
+                if (currentPlayable != null) {
+                    target = PodcastSegmentPlayback.adjustForwardSeekPosition(currentPlayable, target);
+                }
 
                 if (duration > 0 && target >= duration) {
                     handlePlaybackEnded();
                     return;
                 }
 
-                seekTo(target);
+                segmentSkipState.onAutomaticPositionSet(target);
+                super.seekTo(target);
+                EventBus.getDefault().post(
+                        new PlaybackPositionEvent((int) target, (int) player.getDuration()));
             }
 
             @Override
@@ -196,6 +207,9 @@ public class Media3PlaybackService extends MediaLibraryService {
 
             @Override
             public void seekTo(long positionMs) {
+                if (currentPlayable != null) {
+                    segmentSkipState.onUserSeek(currentPlayable, positionMs);
+                }
                 super.seekTo(positionMs);
                 EventBus.getDefault().post(
                         new PlaybackPositionEvent((int) positionMs, (int) player.getDuration()));
@@ -448,6 +462,16 @@ public class Media3PlaybackService extends MediaLibraryService {
                                 }
                                 if (SkipUtils.skipEndingIfNecessary(this, currentPlayable, position, duration, speed)) {
                                     player.seekTo(player.getDuration());
+                                } else if (currentPlayable != null) {
+                                    PodcastSegmentPlayback.skipDuringContinuousPlayback(
+                                            currentPlayable, segmentSkipState, position, duration,
+                                            target -> {
+                                                segmentSkipState.onAutomaticPositionSet(target);
+                                                exoPlayer.seekTo(target);
+                                                EventBus.getDefault().post(
+                                                        new PlaybackPositionEvent((int) target, (int) duration));
+                                            },
+                                            () -> startNextInQueue(currentPlayable, true, false));
                                 }
                             }
                         }, error -> Log.e(TAG, "Position observer error", error));
@@ -519,6 +543,7 @@ public class Media3PlaybackService extends MediaLibraryService {
 
     @OptIn(markerClass = UnstableApi.class)
     private void switchToPlayable(FeedMedia media) {
+        segmentSkipState.reset();
         currentPlayable = media;
         currentPlayable.onPlaybackStart();
 

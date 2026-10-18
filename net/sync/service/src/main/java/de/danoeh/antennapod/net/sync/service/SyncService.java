@@ -109,6 +109,7 @@ public class SyncService extends Worker {
             }
         } finally {
             currentlyActive = false;
+            PodcastSegmentsDownloadWorker.enqueueImmediately(getApplicationContext());
         }
     }
 

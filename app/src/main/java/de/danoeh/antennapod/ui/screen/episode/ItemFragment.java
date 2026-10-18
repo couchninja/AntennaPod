@@ -52,6 +52,7 @@ import de.danoeh.antennapod.storage.database.DBReader;
 import de.danoeh.antennapod.storage.preferences.UsageStatistics;
 import de.danoeh.antennapod.storage.preferences.UserPreferences;
 import de.danoeh.antennapod.ui.appstartintent.OnlineFeedviewActivityStarter;
+import de.danoeh.antennapod.parser.podcastsegments.PodcastSegmentsFormatter;
 import de.danoeh.antennapod.ui.cleaner.ShownotesCleaner;
 import de.danoeh.antennapod.ui.common.Converter;
 import de.danoeh.antennapod.ui.common.DateFormatter;
@@ -430,7 +431,8 @@ public class ItemFragment extends Fragment {
         if (feedItem != null && context != null) {
             int duration = feedItem.getMedia() != null ? feedItem.getMedia().getDuration() : Integer.MAX_VALUE;
             DBReader.loadDescriptionOfFeedItem(feedItem);
-            ShownotesCleaner t = new ShownotesCleaner(context, feedItem.getDescription(), duration);
+            String description = PodcastSegmentsFormatter.appendToDescription(feedItem.getDescription(), feedItem);
+            ShownotesCleaner t = new ShownotesCleaner(context, description, duration);
             webviewData = t.processShownotes();
         }
         return feedItem;

@@ -5,6 +5,7 @@ import android.util.Log;
 import de.danoeh.antennapod.event.MessageEvent;
 import de.danoeh.antennapod.model.feed.FeedMedia;
 import de.danoeh.antennapod.model.feed.FeedPreferences;
+import de.danoeh.antennapod.parser.podcastsegments.PodcastSegmentSkipHelper;
 import de.danoeh.antennapod.playback.service.R;
 import org.greenrobot.eventbus.EventBus;
 
@@ -36,7 +37,7 @@ public final class SkipUtils {
                     context.getResources().getQuantityString(R.plurals.pref_feed_skip_intro_snackbar,
                             (int) (startPosition / 1000), (int) (startPosition / 1000))));
         }
-        return startPosition;
+        return PodcastSegmentSkipHelper.applyContinuousSkipMs(media, startPosition);
     }
 
     /**
