@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="24dp"
+    android:paddingVertical="8dp">
+
+    <com.google.android.material.materialswitch.MaterialSwitch
+        android:id="@+id/enabledSwitch"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/enabled" />
+
+    <LinearLayout
+        android:id="@+id/optionsLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="start|center_vertical"
+        android:orientation="horizontal">
+
+        <Spinner
+            android:id="@+id/directionSpinner"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="0dp"
+            android:minHeight="0dp" />
+
+        <Spinner
+            android:id="@+id/episodeCountSpinner"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp" />
+    </LinearLayout>
+
+</LinearLayout>

@@ -44,6 +44,7 @@ import java.util.List;
 
 import de.danoeh.antennapod.R;
 import de.danoeh.antennapod.activity.MainActivity;
+import de.danoeh.antennapod.ui.screen.smartqueue.SmartQueueFragment;
 import de.danoeh.antennapod.ui.episodeslist.EpisodeItemListAdapter;
 import de.danoeh.antennapod.ui.common.ConfirmationDialog;
 import de.danoeh.antennapod.ui.MenuItemUtils;
@@ -276,6 +277,9 @@ public class QueueFragment extends Fragment implements MaterialToolbar.OnMenuIte
         boolean keepSorted = UserPreferences.isQueueKeepSorted();
         toolbar.getMenu().findItem(R.id.queue_lock).setChecked(UserPreferences.isQueueLocked());
         toolbar.getMenu().findItem(R.id.queue_lock).setVisible(!keepSorted);
+        boolean smartQueue = UserPreferences.isSmartQueueEnabled();
+        toolbar.getMenu().findItem(R.id.smart_queue_settings).setVisible(smartQueue);
+        toolbar.getMenu().findItem(R.id.rebuild_smart_queue).setVisible(smartQueue);
     }
 
     @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
@@ -300,8 +304,23 @@ public class QueueFragment extends Fragment implements MaterialToolbar.OnMenuIte
         } else if (itemId == R.id.refresh_item) {
             FeedUpdateManager.getInstance().runOnceOrAsk(requireContext());
             return true;
+        } else if (itemId == R.id.smart_queue_settings) {
+            ((MainActivity) requireActivity()).loadFragment(SmartQueueFragment.TAG, null);
+            return true;
+        } else if (itemId == R.id.rebuild_smart_queue) {
+            ConfirmationDialog rebuildDialog = new ConfirmationDialog(getActivity(),
+                    R.string.rebuild_smart_queue_label,
+                    R.string.rebuild_smart_queue_confirmation_msg) {
+
+                @Override
+                public void onConfirmButtonPressed(DialogInterface dialog) {
+                    dialog.dismiss();
+                    DBWriter.rebuildSmartQueue(requireContext().getApplicationContext());
+                }
+            };
+            rebuildDialog.createNewDialog().show();
+            return true;
         } else if (itemId == R.id.clear_queue) {
-            // make sure the user really wants to clear the queue
             ConfirmationDialog conDialog = new ConfirmationDialog(getActivity(),
                     R.string.clear_queue_label,
                     R.string.clear_queue_confirmation_msg) {

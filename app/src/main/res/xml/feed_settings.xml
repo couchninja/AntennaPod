@@ -86,6 +86,12 @@
             android:title="@string/auto_download_label" />
 
         <Preference
+            android:icon="@drawable/ic_download"
+            android:key="keepDownloadEpisodes"
+            android:summary="@string/pref_feed_keep_download_summary"
+            android:title="@string/pref_feed_keep_download_title" />
+
+        <Preference
             android:key="episodeFilter"
             android:summary="@string/episode_filters_description"
             android:title="@string/episode_filters_label" />
