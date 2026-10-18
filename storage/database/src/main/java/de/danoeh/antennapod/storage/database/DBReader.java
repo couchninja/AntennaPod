@@ -768,8 +768,10 @@ public final class DBReader {
             tagsSorted.add(0, untaggedTag);
         }
 
+        final Map<Long, Integer> unplayedFeedCounters = feedCounter == FeedCounter.SHOW_UNPLAYED
+                ? feedCounters : adapter.getFeedCounters(FeedCounter.SHOW_UNPLAYED);
         NavDrawerData result = new NavDrawerData(feeds, tagsSorted,
-                queueSize, numNewItems, numDownloadedItems, feedCounters);
+                queueSize, numNewItems, numDownloadedItems, feedCounters, unplayedFeedCounters);
         adapter.close();
         return result;
     }

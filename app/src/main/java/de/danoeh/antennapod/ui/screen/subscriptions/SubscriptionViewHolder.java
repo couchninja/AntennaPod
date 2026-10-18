@@ -1,10 +1,12 @@
 package de.danoeh.antennapod.ui.screen.subscriptions;
 
 import android.app.Activity;
+import android.graphics.drawable.Drawable;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
+import androidx.appcompat.content.res.AppCompatResources;
 import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 import de.danoeh.antennapod.R;
@@ -24,8 +26,10 @@ public class SubscriptionViewHolder extends RecyclerView.ViewHolder {
     public final ImageView gradient;
     public final ImageView selectIcon;
     public final CardView card;
+    public final CardView coverContainer;
     public final View errorIcon;
     public final WeakReference<Activity> mainActivityRef;
+    private final Drawable unwatchedBorderDrawable;
 
     public SubscriptionViewHolder(@NonNull View itemView, Activity mainActivity) {
         super(itemView);
@@ -36,11 +40,14 @@ public class SubscriptionViewHolder extends RecyclerView.ViewHolder {
         gradient = itemView.findViewById(R.id.gradientOverlay);
         selectIcon = itemView.findViewById(R.id.selectedIcon);
         card = itemView.findViewById(R.id.outerContainer);
+        coverContainer = itemView.findViewById(R.id.coverContainer);
         errorIcon = itemView.findViewById(R.id.errorIcon);
         this.mainActivityRef = new WeakReference<>(mainActivity);
+        unwatchedBorderDrawable = AppCompatResources.getDrawable(itemView.getContext(),
+                R.drawable.subscription_unwatched_border);
     }
 
-    public void bind(Feed feed, int columnCount, int counter) {
+    public void bind(Feed feed, int columnCount, int counter, boolean hasUnwatchedEpisodes) {
         title.setText(feed.getTitle());
         fallbackTitle.setText(feed.getTitle());
         coverImage.setContentDescription(feed.getTitle());
@@ -83,5 +90,7 @@ public class SubscriptionViewHolder extends RecyclerView.ViewHolder {
         }
         title.setTextSize(textSize);
         fallbackTitle.setTextSize(textSize);
+
+        coverContainer.setForeground(hasUnwatchedEpisodes ? unwatchedBorderDrawable : null);
     }
 }
