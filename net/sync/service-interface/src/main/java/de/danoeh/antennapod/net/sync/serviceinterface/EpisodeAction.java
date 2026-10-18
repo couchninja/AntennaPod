@@ -83,11 +83,11 @@ public class EpisodeAction {
             int started = object.optInt("started", -1);
             int position = object.optInt("position", -1);
             int total = object.optInt("total", -1);
-            if (started >= 0 && position > 0 && total > 0) {
-                builder
-                        .started(started)
-                        .position(position)
-                        .total(total);
+            if (position >= 0 && total > 0) {
+                if (started >= 0) {
+                    builder.started(started);
+                }
+                builder.position(position).total(total);
             }
         }
         return builder.build();
