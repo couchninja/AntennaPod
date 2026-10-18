@@ -14,10 +14,8 @@ import de.danoeh.antennapod.R;
 import de.danoeh.antennapod.event.MessageEvent;
 import de.danoeh.antennapod.model.feed.Feed;
 import de.danoeh.antennapod.net.download.serviceinterface.DownloadServiceInterface;
-import de.danoeh.antennapod.playback.service.PlaybackController;
 import de.danoeh.antennapod.storage.database.DBWriter;
 import de.danoeh.antennapod.model.feed.FeedItem;
-import de.danoeh.antennapod.storage.preferences.PlaybackPreferences;
 import de.danoeh.antennapod.ui.share.ShareDialog;
 import de.danoeh.antennapod.ui.view.LocalDeleteModal;
 
@@ -99,8 +97,12 @@ public class EpisodeMultiSelectActionHandler {
         for (FeedItem item : items) {
             item.setPlayed(true);
             FeedItemMenuHandler.enqueueGpodderMarkPlayedAction(item);
+            if (item.hasMedia()) {
+                FeedItemMenuHandler.stopPlaybackIfCurrentlyPlaying(activity, item.getMedia());
+            }
         }
         DBWriter.markItemsPlayed(FeedItem.PLAYED, true, items);
+        DBWriter.removeQueueItem(activity, true, getSelectedIds(items));
         showMessage(R.plurals.marked_as_played_message, items.size());
     }
 
@@ -171,13 +173,7 @@ public class EpisodeMultiSelectActionHandler {
                 continue;
             }
             episode.getMedia().setPosition(0);
-            if (PlaybackPreferences.getCurrentlyPlayingFeedMediaId() == episode.getMedia().getId()) {
-                PlaybackPreferences.writeNoMediaPlaying();
-                PlaybackController.bindToMedia3Service(activity, controller -> {
-                    controller.clearMediaItems();
-                    controller.stop();
-                });
-            }
+            FeedItemMenuHandler.stopPlaybackIfCurrentlyPlaying(activity, episode.getMedia());
             toReset.add(episode);
         }
         DBWriter.markItemsPlayed(FeedItem.UNPLAYED, true, toReset);
