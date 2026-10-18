@@ -24,6 +24,7 @@ public abstract class SelectableAdapter<T extends RecyclerView.ViewHolder> exten
     private OnSelectModeListener onSelectModeListener;
     protected boolean shouldSelectLazyLoadedItems = false;
     private int totalNumberOfItems = COUNT_AUTOMATICALLY;
+    protected int lastToggledPosition = -1;
 
     public SelectableAdapter(FragmentActivity activity) {
         this.activity = activity;
@@ -37,6 +38,7 @@ public abstract class SelectableAdapter<T extends RecyclerView.ViewHolder> exten
         shouldSelectLazyLoadedItems = false;
         selectedIds.clear();
         selectedIds.add(getItemId(pos));
+        lastToggledPosition = pos;
 
         OnBackPressedCallback backPressedCallback = new OnBackPressedCallback(true) {
             @Override
@@ -67,11 +69,8 @@ public abstract class SelectableAdapter<T extends RecyclerView.ViewHolder> exten
             @Override
             public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
                 if (item.getItemId() == R.id.select_toggle) {
-                    boolean selectAll = selectedIds.size() != getItemCount();
-                    shouldSelectLazyLoadedItems = selectAll;
-                    setSelected(0, getItemCount(), selectAll);
+                    toggleSelectAll();
                     toggleSelectAllIcon(mode.getMenu());
-                    onSelectedItemsUpdated();
                     return true;
                 } else if (item.getItemId() == R.id.select_all_above) {
                     int firstSelectedPosition = 0;
@@ -103,6 +102,7 @@ public abstract class SelectableAdapter<T extends RecyclerView.ViewHolder> exten
                 actionMode = null;
                 shouldSelectLazyLoadedItems = false;
                 selectedIds.clear();
+                lastToggledPosition = -1;
                 callOnEndSelectMode();
                 notifyDataSetChanged();
                 backPressedCallback.remove();
@@ -139,11 +139,7 @@ public abstract class SelectableAdapter<T extends RecyclerView.ViewHolder> exten
      * @param selected true for selected state and false for unselected
      */
     public void setSelected(int pos, boolean selected) {
-        if (selected) {
-            selectedIds.add(getItemId(pos));
-        } else {
-            selectedIds.remove(getItemId(pos));
-        }
+        setItemSelected(pos, selected);
         onSelectedItemsUpdated();
     }
 
@@ -151,24 +147,53 @@ public abstract class SelectableAdapter<T extends RecyclerView.ViewHolder> exten
      * Set the selected state of item for a given range
      *
      * @param startPos start position of range, inclusive
-     * @param endPos   end position of range, inclusive
+     * @param endPos   end position of range, exclusive
      * @param selected indicates the selection state
-     * @throws IllegalArgumentException if start and end positions are not valid
      */
-    public void setSelected(int startPos, int endPos, boolean selected) throws IllegalArgumentException {
+    public void setSelected(int startPos, int endPos, boolean selected) {
         for (int i = startPos; i < endPos && i < getItemCount(); i++) {
-            setSelected(i, selected);
+            setItemSelected(i, selected);
         }
+        onSelectedItemsUpdated();
         notifyItemRangeChanged(startPos, (endPos - startPos));
+    }
+
+    private void setItemSelected(int pos, boolean selected) {
+        if (selected) {
+            selectedIds.add(getItemId(pos));
+        } else {
+            selectedIds.remove(getItemId(pos));
+        }
     }
 
     protected void toggleSelection(int pos) {
         setSelected(pos, !isSelected(pos));
+        lastToggledPosition = pos;
         notifyItemChanged(pos);
 
         if (selectedIds.isEmpty()) {
             endSelectMode();
         }
+    }
+
+    protected void selectRangeToPosition(int pos) {
+        if (!inActionMode() || lastToggledPosition < 0 || pos < 0 || pos >= getItemCount()
+                || getItemId(pos) == RecyclerView.NO_ID) {
+            return;
+        }
+        int start = Math.min(lastToggledPosition, pos);
+        int end = Math.max(lastToggledPosition, pos);
+        setSelected(start, end + 1, true);
+        lastToggledPosition = pos;
+    }
+
+    private void toggleSelectAll() {
+        if (!inActionMode()) {
+            return;
+        }
+        boolean selectAll = selectedIds.size() != getItemCount();
+        shouldSelectLazyLoadedItems = selectAll;
+        setSelected(0, getItemCount(), selectAll);
     }
 
     public boolean inActionMode() {
