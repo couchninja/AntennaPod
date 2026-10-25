@@ -9,29 +9,47 @@ public final class PodcastSegmentsFormatter {
     private PodcastSegmentsFormatter() {
     }
 
-    public static String appendToDescription(String description, FeedItem item) {
+    public static String appendToDescription(String description, FeedItem item, String summaryHeading,
+                                             String shownotesHeading) {
         EpisodeSegments episode = PodcastSegmentsRepository.getEpisodeSegments(item);
-        if (episode == null || !episode.hasSegments()) {
+        if (episode == null) {
             return description;
         }
-        StringBuilder block = new StringBuilder();
-        block.append("<p><b>Segments</b></p>");
-        for (PodcastSegment segment : episode.getSegments()) {
-            block.append("<p>")
-                    .append(formatTime(segment.getStartSec()))
-                    .append("–")
-                    .append(formatTime(segment.getEndSec()))
-                    .append(" ")
-                    .append(escapeHtml(segment.getType()));
-            if (segment.getLabel() != null) {
-                block.append(" (").append(escapeHtml(segment.getLabel())).append(")");
+        if (episode.getSummary() == null && !episode.hasSegments()) {
+            return description;
+        }
+        StringBuilder result = new StringBuilder();
+        if (episode.getSummary() != null) {
+            if (summaryHeading != null && !summaryHeading.isEmpty()) {
+                result.append("<p><b>").append(escapeHtml(summaryHeading)).append("</b></p>");
             }
-            block.append("</p>");
+            result.append(formatSummaryForShownotes(episode.getSummary()));
         }
-        if (description == null || description.isEmpty()) {
-            return block.toString();
+        if (description != null && !description.isEmpty()) {
+            if (shownotesHeading != null && !shownotesHeading.isEmpty()) {
+                result.append("<p><b>").append(escapeHtml(shownotesHeading)).append("</b></p>");
+            }
+            result.append(description);
         }
-        return description + block;
+        if (episode.hasSegments()) {
+            result.append("<p><b>Segments</b></p>");
+            for (PodcastSegment segment : episode.getSegments()) {
+                result.append("<p>")
+                        .append(formatTime(segment.getStartSec()))
+                        .append("–")
+                        .append(formatTime(segment.getEndSec()))
+                        .append(" ")
+                        .append(escapeHtml(segment.getType()));
+                if (segment.getLabel() != null) {
+                    result.append(" (").append(escapeHtml(segment.getLabel())).append(")");
+                }
+                result.append("</p>");
+            }
+        }
+        if (result.length() == 0) {
+            return description;
+        }
+        return result.toString();
     }
 
     private static String formatTime(double seconds) {
@@ -43,5 +61,13 @@ public final class PodcastSegmentsFormatter {
 
     private static String escapeHtml(String text) {
         return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+    }
+
+    private static String formatSummaryForShownotes(String summary) {
+        String text = summary.replace("\r\n", "\n").replace('\r', '\n');
+        if (!text.contains("<")) {
+            return "<p>" + escapeHtml(text).replace("\n", "<br />") + "</p>";
+        }
+        return text.replace("\n", "<br />");
     }
 }

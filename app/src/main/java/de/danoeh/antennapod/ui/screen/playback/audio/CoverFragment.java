@@ -42,6 +42,7 @@ import de.danoeh.antennapod.storage.preferences.PlaybackPreferences;
 import de.danoeh.antennapod.ui.appstartintent.MainActivityStarter;
 import de.danoeh.antennapod.ui.appstartintent.MediaButtonStarter;
 import de.danoeh.antennapod.ui.appstartintent.OnlineFeedviewActivityStarter;
+import de.danoeh.antennapod.parser.podcastsegments.PodcastSegmentsRepository;
 import de.danoeh.antennapod.ui.chapters.ChapterUtils;
 import de.danoeh.antennapod.ui.screen.chapter.ChaptersFragment;
 import de.danoeh.antennapod.playback.service.PlaybackController;
@@ -210,7 +211,8 @@ public class CoverFragment extends Fragment {
         } else if (media instanceof FeedMedia) {
             FeedMedia fm = ((FeedMedia) media);
             // If an item has chapters but they are not loaded yet, still display the button.
-            chapterControlVisible = fm.getItem() != null && fm.getItem().hasChapters();
+            chapterControlVisible = fm.getItem() != null
+                    && (fm.getItem().hasChapters() || PodcastSegmentsRepository.hasEpisodeSegments(fm.getItem()));
         }
         int newVisibility = chapterControlVisible ? View.VISIBLE : View.GONE;
         if (viewBinding.chapterButton.getVisibility() != newVisibility) {

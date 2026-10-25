@@ -814,6 +814,7 @@
     <string name="nextcloud_login_error_generic">Unable to log into your Nextcloud.\n\n- Check your network connection.\n- Confirm that you are using the correct server address.\n- Make sure that the Gpodder Sync Nextcloud plugin is installed.</string>
     <string name="pref_podcast_segments_url_title">Episode segments JSON URL</string>
     <string name="pref_podcast_segments_url_summary">URL to download podcast segment data (ads, Patreon blocks, etc.)</string>
+    <string name="podcast_segments_summary_heading">Summary</string>
     <string name="episode_has_segments_label">Episode has segment data</string>
 
     <!-- Directory chooser -->

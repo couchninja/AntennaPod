@@ -19,8 +19,11 @@ public class ChapterSeekBar extends androidx.appcompat.widget.AppCompatSeekBar {
     private float progressPrimary;
     private float progressSecondary;
     private float[] dividerPos;
+    private boolean[] skipChapterBlocks;
     private boolean isHighlighted = false;
     private final Paint paintBackground = new Paint();
+    private final Paint paintSkipBackground = new Paint();
+    private final Paint paintSkipProgress = new Paint();
     private final Paint paintProgressPrimary = new Paint();
 
     public ChapterSeekBar(Context context) {
@@ -45,6 +48,11 @@ public class ChapterSeekBar extends androidx.appcompat.widget.AppCompatSeekBar {
 
         paintBackground.setColor(ThemeUtils.getColorFromAttr(getContext(), R.attr.colorSurfaceVariant));
         paintBackground.setAlpha(128);
+        int skipYellow = ThemeUtils.getColorFromAttr(getContext(), R.attr.icon_yellow);
+        paintSkipBackground.setColor(skipYellow);
+        paintSkipBackground.setAlpha(180);
+        paintSkipProgress.setColor(skipYellow);
+        paintSkipProgress.setAlpha(255);
         paintProgressPrimary.setColor(ThemeUtils.getColorFromAttr(getContext(), R.attr.colorPrimary));
     }
 
@@ -60,7 +68,13 @@ public class ChapterSeekBar extends androidx.appcompat.widget.AppCompatSeekBar {
             this.dividerPos[this.dividerPos.length - 1] = 1;
         } else {
             this.dividerPos = null;
+            skipChapterBlocks = null;
         }
+        invalidate();
+    }
+
+    public void setSkipChapterBlocks(boolean[] skipChapterBlocks) {
+        this.skipChapterBlocks = skipChapterBlocks;
         invalidate();
     }
 
@@ -111,32 +125,73 @@ public class ChapterSeekBar extends androidx.appcompat.widget.AppCompatSeekBar {
         canvas.translate(getPaddingLeft(), getPaddingTop());
 
         for (int i = 1; i < dividerPos.length; i++) {
+            int blockIndex = i - 1;
+            Paint blockBackground = backgroundPaintForBlock(blockIndex);
             float right = dividerPos[i] * width - chapterMargin;
             float left = dividerPos[i - 1] * width;
             float rightCurr = dividerPos[currChapter] * width - chapterMargin;
             float leftCurr = dividerPos[currChapter - 1] * width;
 
-            canvas.drawRect(left, top, right, bottom, paintBackground);
+            canvas.drawRect(left, top, right, bottom, blockBackground);
 
             if (progressSecondary > 0 && progressSecondary < width) {
                 if (right < progressSecondary) {
-                    canvas.drawRect(left, top, right, bottom, paintBackground);
+                    canvas.drawRect(left, top, right, bottom, blockBackground);
                 } else if (progressSecondary > left) {
-                    canvas.drawRect(left, top, progressSecondary, bottom, paintBackground);
+                    canvas.drawRect(left, top, progressSecondary, bottom, blockBackground);
                 }
             }
 
             if (right < progressPrimary) {
                 currChapter = i + 1;
-                canvas.drawRect(left, top, right, bottom, paintProgressPrimary);
+                canvas.drawRect(left, top, right, bottom, progressPaintForBlock(blockIndex));
             } else if (isHighlighted || isPressed()) {
-                canvas.drawRect(leftCurr, topExpanded, rightCurr, bottomExpanded, paintBackground);
-                canvas.drawRect(leftCurr, topExpanded, progressPrimary, bottomExpanded, paintProgressPrimary);
+                int activeBlock = currChapter - 1;
+                canvas.drawRect(leftCurr, topExpanded, rightCurr, bottomExpanded,
+                        backgroundPaintForBlock(activeBlock));
+                canvas.drawRect(leftCurr, topExpanded, progressPrimary, bottomExpanded,
+                        progressPaintForBlock(activeBlock));
             } else {
-                canvas.drawRect(leftCurr, top, progressPrimary, bottom, paintProgressPrimary);
+                canvas.drawRect(leftCurr, top, progressPrimary, bottom,
+                        progressPaintForBlock(currChapter - 1));
             }
         }
         canvas.restoreToCount(saveCount);
+    }
+
+    private Paint backgroundPaintForBlock(int blockIndex) {
+        if (isSkipBlock(blockIndex)) {
+            return paintSkipBackground;
+        }
+        return paintBackground;
+    }
+
+    private Paint progressPaintForBlock(int blockIndex) {
+        if (isSkipBlock(blockIndex)) {
+            return paintSkipProgress;
+        }
+        return paintProgressPrimary;
+    }
+
+    private boolean isSkipBlock(int blockIndex) {
+        if (skipChapterBlocks == null) {
+            return false;
+        }
+        int segmentIndex = segmentIndexForBlock(blockIndex);
+        return segmentIndex >= 0 && segmentIndex < skipChapterBlocks.length && skipChapterBlocks[segmentIndex];
+    }
+
+    private int segmentIndexForBlock(int blockIndex) {
+        if (skipChapterBlocks == null || dividerPos == null) {
+            return -1;
+        }
+        if (blockIndex <= 0) {
+            if (dividerPos.length > 1 && dividerPos[1] <= 0f) {
+                return 0;
+            }
+            return -1;
+        }
+        return blockIndex - 1;
     }
 
     private void drawThumb(Canvas canvas) {

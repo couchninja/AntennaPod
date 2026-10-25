@@ -14,6 +14,9 @@ import de.danoeh.antennapod.net.common.AntennapodHttpClient;
 import de.danoeh.antennapod.parser.media.MediaFormatDetector;
 import de.danoeh.antennapod.storage.database.DBReader;
 import de.danoeh.antennapod.parser.feed.PodcastIndexChapterParser;
+import de.danoeh.antennapod.parser.podcastsegments.EpisodeSegments;
+import de.danoeh.antennapod.parser.podcastsegments.PodcastSegmentChapters;
+import de.danoeh.antennapod.parser.podcastsegments.PodcastSegmentsRepository;
 import de.danoeh.antennapod.parser.media.id3.ChapterReader;
 import de.danoeh.antennapod.parser.media.id3.ID3ReaderException;
 import de.danoeh.antennapod.model.playback.Playable;
@@ -75,7 +78,27 @@ public class ChapterUtils {
             List<Chapter> chaptersFromMediaFile = ChapterUtils.loadChaptersFromMediaFile(playable, context);
             List<Chapter> chaptersMergePhase1 = ChapterMerger.merge(chaptersFromDatabase, chaptersFromMediaFile);
             List<Chapter> chapters = ChapterMerger.merge(chaptersMergePhase1, chaptersFromPodcastIndex);
-            if (chapters == null) {
+            boolean chaptersFromPodcastSegments = false;
+            if (chapters == null || chapters.isEmpty()) {
+                if (playable instanceof FeedMedia) {
+                    FeedMedia feedMedia = (FeedMedia) playable;
+                    if (feedMedia.getItem() != null) {
+                        EpisodeSegments episode = PodcastSegmentsRepository.getEpisodeSegments(feedMedia.getItem());
+                        List<Chapter> segmentChapters = PodcastSegmentChapters.toChapters(episode);
+                        if (!segmentChapters.isEmpty()) {
+                            chapters = segmentChapters;
+                            chaptersFromPodcastSegments = true;
+                        }
+                    }
+                }
+            }
+            if (playable instanceof FeedMedia) {
+                FeedMedia feedMedia = (FeedMedia) playable;
+                if (feedMedia.getItem() != null) {
+                    feedMedia.getItem().setChaptersFromPodcastSegments(chaptersFromPodcastSegments);
+                }
+            }
+            if (chapters == null || chapters.isEmpty()) {
                 // Do not try loading again. There are no chapters or parsing failed.
                 playable.setChapters(Collections.emptyList());
             } else {
