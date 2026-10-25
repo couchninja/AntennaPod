@@ -117,7 +117,8 @@ public class ItemDescriptionFragment extends Fragment {
                 }
                 DBReader.loadDescriptionOfFeedItem(feedMedia.getItem());
                 if (feedMedia.getItem() != null) {
-                    description = PodcastSegmentsFormatter.appendToDescription(description, feedMedia.getItem(),
+                    description = PodcastSegmentsFormatter.appendToDescription(feedMedia.getItem().getDescription(),
+                            feedMedia.getItem(),
                             context.getString(de.danoeh.antennapod.ui.i18n.R.string.podcast_segments_summary_heading),
                             context.getString(de.danoeh.antennapod.ui.i18n.R.string.shownotes_label));
                 }
