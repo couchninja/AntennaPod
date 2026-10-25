@@ -62,6 +62,10 @@ public class PodcastSegmentsParser {
 
     private static EpisodeSegments parseEpisode(JSONObject episodeObj) {
         double mp3DurationSec = episodeObj.optDouble("mp3_duration_sec", 0);
+        String summary = episodeObj.optString("summary", null);
+        if (summary != null && summary.isEmpty()) {
+            summary = null;
+        }
         JSONArray segmentsArray = episodeObj.optJSONArray("segments");
         List<String> aliases = new ArrayList<>();
         JSONArray aliasesArray = episodeObj.optJSONArray("episode_url_aliases");
@@ -74,7 +78,7 @@ public class PodcastSegmentsParser {
             }
         }
         if (segmentsArray == null) {
-            return new EpisodeSegments(mp3DurationSec, List.of(), aliases);
+            return new EpisodeSegments(mp3DurationSec, List.of(), aliases, summary);
         }
         List<PodcastSegment> segments = new ArrayList<>();
         for (int i = 0; i < segmentsArray.length(); i++) {
@@ -100,7 +104,7 @@ public class PodcastSegmentsParser {
             }
             segments.add(new PodcastSegment(type, startSec, endSec, label));
         }
-        return new EpisodeSegments(mp3DurationSec, segments, aliases);
+        return new EpisodeSegments(mp3DurationSec, segments, aliases, summary);
     }
 
     public static String normalizeGuid(String guid) {

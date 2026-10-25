@@ -138,7 +138,7 @@ public class PodcastSegmentsRepository {
             clamped.add(new PodcastSegment(segment.getType(), segment.getStartSec(), endSec, segment.getLabel()));
         }
         EpisodeSegments clampedEpisode = new EpisodeSegments(Math.min(episode.getMp3DurationSec(), durationSec),
-                clamped, episode.getEpisodeUrlAliases());
+                clamped, episode.getEpisodeUrlAliases(), episode.getSummary());
         return mergeAutoSkipSegments(clampedEpisode, durationSec);
     }
 
@@ -181,7 +181,8 @@ public class PodcastSegmentsRepository {
         List<PodcastSegment> merged = new ArrayList<>(nonAutoSkip);
         merged.addAll(mergedAutoSkip);
         merged.sort((a, b) -> Double.compare(a.getStartSec(), b.getStartSec()));
-        return new EpisodeSegments(episode.getMp3DurationSec(), merged, episode.getEpisodeUrlAliases());
+        return new EpisodeSegments(episode.getMp3DurationSec(), merged, episode.getEpisodeUrlAliases(),
+                episode.getSummary());
     }
 
     public static boolean hasEpisodeSegments(FeedItem item) {

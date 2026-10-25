@@ -431,7 +431,9 @@ public class ItemFragment extends Fragment {
         if (feedItem != null && context != null) {
             int duration = feedItem.getMedia() != null ? feedItem.getMedia().getDuration() : Integer.MAX_VALUE;
             DBReader.loadDescriptionOfFeedItem(feedItem);
-            String description = PodcastSegmentsFormatter.appendToDescription(feedItem.getDescription(), feedItem);
+            String description = PodcastSegmentsFormatter.appendToDescription(feedItem.getDescription(), feedItem,
+                    context.getString(de.danoeh.antennapod.ui.i18n.R.string.podcast_segments_summary_heading),
+                    context.getString(de.danoeh.antennapod.ui.i18n.R.string.shownotes_label));
             ShownotesCleaner t = new ShownotesCleaner(context, description, duration);
             webviewData = t.processShownotes();
         }

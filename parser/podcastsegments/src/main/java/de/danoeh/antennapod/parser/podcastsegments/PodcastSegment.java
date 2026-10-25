@@ -30,6 +30,6 @@ public class PodcastSegment {
     }
 
     public boolean isAutoSkipType() {
-        return "ad".equals(type) || "patreon_backers".equals(type);
+        return "ad".equals(type) || "patreon_backers".equals(type) || "patreon backers".equals(type);
     }
 }
