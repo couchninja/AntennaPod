@@ -67,6 +67,7 @@ public class FeedItem implements Serializable {
      * in the database. The 'hasChapters' attribute should be used to check if this item has any chapters.
      * */
     private transient List<Chapter> chapters;
+    private transient boolean chaptersFromPodcastSegments;
     private String imageUrl;
 
     private boolean autoDownloadEnabled = true;
@@ -347,6 +348,14 @@ public class FeedItem implements Serializable {
 
     public void setChapters(List<Chapter> chapters) {
         this.chapters = chapters;
+    }
+
+    public boolean isChaptersFromPodcastSegments() {
+        return chaptersFromPodcastSegments;
+    }
+
+    public void setChaptersFromPodcastSegments(boolean chaptersFromPodcastSegments) {
+        this.chaptersFromPodcastSegments = chaptersFromPodcastSegments;
     }
 
     public String getItemIdentifier() {

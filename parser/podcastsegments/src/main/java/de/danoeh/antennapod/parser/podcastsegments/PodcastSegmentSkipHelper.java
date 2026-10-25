@@ -1,9 +1,12 @@
 package de.danoeh.antennapod.parser.podcastsegments;
 
+import androidx.annotation.Nullable;
+
 import de.danoeh.antennapod.model.feed.FeedItem;
 import de.danoeh.antennapod.model.feed.FeedMedia;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 public final class PodcastSegmentSkipHelper {
@@ -70,6 +73,24 @@ public final class PodcastSegmentSkipHelper {
             }
         }
         return currentMs;
+    }
+
+    @Nullable
+    public static boolean[] segmentChapterAutoSkipColors(FeedItem item) {
+        if (item == null || !item.isChaptersFromPodcastSegments()) {
+            return null;
+        }
+        EpisodeSegments episode = getEpisodeSegments(item);
+        if (episode == null || !episode.hasSegments()) {
+            return null;
+        }
+        List<PodcastSegment> segments = new ArrayList<>(episode.getSegments());
+        segments.sort(Comparator.comparingDouble(PodcastSegment::getStartSec));
+        boolean[] flags = new boolean[segments.size()];
+        for (int i = 0; i < segments.size(); i++) {
+            flags[i] = segments.get(i).isAutoSkipType();
+        }
+        return flags;
     }
 
     public static boolean isInsideAutoSkipSegment(FeedMedia media, long positionMs) {

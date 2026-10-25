@@ -64,6 +64,7 @@ import de.danoeh.antennapod.event.playback.PlaybackServiceEvent;
 import de.danoeh.antennapod.event.playback.SleepTimerUpdatedEvent;
 import de.danoeh.antennapod.event.playback.SpeedChangedEvent;
 import de.danoeh.antennapod.ui.episodeslist.FeedItemMenuHandler;
+import de.danoeh.antennapod.parser.podcastsegments.PodcastSegmentSkipHelper;
 import de.danoeh.antennapod.model.feed.Chapter;
 import de.danoeh.antennapod.model.feed.FeedItem;
 import de.danoeh.antennapod.model.feed.FeedMedia;
@@ -184,6 +185,12 @@ public class AudioPlayerFragment extends Fragment implements
         }
 
         sbPosition.setDividerPos(dividerPos);
+        if (dividerPos != null) {
+            sbPosition.setSkipChapterBlocks(PodcastSegmentSkipHelper.segmentChapterAutoSkipColors(
+                    currentMedia.getItem()));
+        } else {
+            sbPosition.setSkipChapterBlocks(null);
+        }
     }
 
     private void setupControlButtons() {

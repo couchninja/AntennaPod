@@ -78,6 +78,7 @@ public class ChapterUtils {
             List<Chapter> chaptersFromMediaFile = ChapterUtils.loadChaptersFromMediaFile(playable, context);
             List<Chapter> chaptersMergePhase1 = ChapterMerger.merge(chaptersFromDatabase, chaptersFromMediaFile);
             List<Chapter> chapters = ChapterMerger.merge(chaptersMergePhase1, chaptersFromPodcastIndex);
+            boolean chaptersFromPodcastSegments = false;
             if (chapters == null || chapters.isEmpty()) {
                 if (playable instanceof FeedMedia) {
                     FeedMedia feedMedia = (FeedMedia) playable;
@@ -86,8 +87,15 @@ public class ChapterUtils {
                         List<Chapter> segmentChapters = PodcastSegmentChapters.toChapters(episode);
                         if (!segmentChapters.isEmpty()) {
                             chapters = segmentChapters;
+                            chaptersFromPodcastSegments = true;
                         }
                     }
+                }
+            }
+            if (playable instanceof FeedMedia) {
+                FeedMedia feedMedia = (FeedMedia) playable;
+                if (feedMedia.getItem() != null) {
+                    feedMedia.getItem().setChaptersFromPodcastSegments(chaptersFromPodcastSegments);
                 }
             }
             if (chapters == null || chapters.isEmpty()) {
