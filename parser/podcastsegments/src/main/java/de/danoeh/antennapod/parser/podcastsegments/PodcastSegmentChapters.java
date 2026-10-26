@@ -10,20 +10,62 @@ import de.danoeh.antennapod.model.feed.Chapter;
 
 public final class PodcastSegmentChapters {
 
+    private static final String UNSEGMENTED_TITLE = "unsegmented";
+
     private PodcastSegmentChapters() {
     }
 
     public static List<Chapter> toChapters(EpisodeSegments episode) {
-        if (episode == null || !episode.hasSegments()) {
-            return Collections.emptyList();
+        return buildChapters(episode).chapters;
+    }
+
+    public static boolean[] autoSkipFlags(EpisodeSegments episode) {
+        ChapterBuild build = buildChapters(episode);
+        if (build.autoSkipFlags.length == 0) {
+            return null;
         }
+        return build.autoSkipFlags;
+    }
+
+    private static ChapterBuild buildChapters(EpisodeSegments episode) {
+        if (episode == null || !episode.hasSegments()) {
+            return new ChapterBuild(Collections.emptyList(), new boolean[0]);
+        }
+        List<PodcastSegment> segments = new ArrayList<>(episode.getSegments());
+        segments.sort(Comparator.comparingDouble(PodcastSegment::getStartSec));
         List<Chapter> chapters = new ArrayList<>();
-        for (PodcastSegment segment : episode.getSegments()) {
+        List<Boolean> autoSkip = new ArrayList<>();
+        double prevEndSec = 0;
+        for (PodcastSegment segment : segments) {
+            if (segment.getStartSec() > prevEndSec) {
+                chapters.add(new Chapter((long) (prevEndSec * 1000), UNSEGMENTED_TITLE, null, null));
+                autoSkip.add(false);
+            }
             chapters.add(new Chapter((long) (segment.getStartSec() * 1000),
                     formatChapterTitle(segment), null, null));
+            autoSkip.add(segment.isAutoSkipType());
+            prevEndSec = Math.max(prevEndSec, segment.getEndSec());
         }
-        chapters.sort(Comparator.comparingLong(Chapter::getStart));
-        return chapters;
+        double durationSec = episode.getMp3DurationSec();
+        if (durationSec > 0 && prevEndSec < durationSec) {
+            chapters.add(new Chapter((long) (prevEndSec * 1000), UNSEGMENTED_TITLE, null, null));
+            autoSkip.add(false);
+        }
+        boolean[] flags = new boolean[autoSkip.size()];
+        for (int i = 0; i < autoSkip.size(); i++) {
+            flags[i] = autoSkip.get(i);
+        }
+        return new ChapterBuild(chapters, flags);
+    }
+
+    private static final class ChapterBuild {
+        private final List<Chapter> chapters;
+        private final boolean[] autoSkipFlags;
+
+        private ChapterBuild(List<Chapter> chapters, boolean[] autoSkipFlags) {
+            this.chapters = chapters;
+            this.autoSkipFlags = autoSkipFlags;
+        }
     }
 
     private static String formatChapterTitle(PodcastSegment segment) {
